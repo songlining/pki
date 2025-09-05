@@ -26,22 +26,28 @@ echo "===================================="
 
 # Wait for Vault to be ready
 echo -e "${YELLOW}⏳ Waiting for Vault to be ready...${NC}"
-until vault status &>/dev/null; do
-    echo "Waiting for Vault..."
-    sleep 2
+timeout=30
+counter=0
+while ! curl -s $VAULT_ADDR/v1/sys/health >/dev/null 2>&1; do
+    if [ $counter -ge $timeout ]; then
+        echo -e "${RED}❌ Timeout waiting for Vault to start${NC}"
+        echo -e "${YELLOW}💡 Check container logs: docker-compose logs vault${NC}"
+        exit 1
+    fi
+    echo "Waiting for Vault server... ($((counter + 1))/$timeout)"
+    sleep 1
+    counter=$((counter + 1))
 done
 
 echo -e "${GREEN}✅ Vault is ready!${NC}"
 vault status
 
-# Check license status
-echo -e "${YELLOW}🔑 Checking Vault Enterprise license...${NC}"
-if vault read sys/license > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ Vault Enterprise license is active!${NC}"
-    vault read sys/license
+# Verify Enterprise features are available
+echo -e "${YELLOW}🔑 Verifying Vault Enterprise features...${NC}"
+if vault read sys/health | grep -q "enterprise.*true"; then
+    echo -e "${GREEN}✅ Vault Enterprise is running with all features available!${NC}"
 else
-    echo -e "${RED}❌ Vault Enterprise license check failed${NC}"
-    echo -e "${YELLOW}💡 Make sure your vault.hclic file contains a valid license${NC}"
+    echo -e "${RED}❌ Enterprise features verification failed${NC}"
 fi
 
 # Enable PKI secrets engine if not already enabled

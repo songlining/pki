@@ -20,6 +20,7 @@ stop: ## Stop Vault Enterprise container
 
 init: ## Initialize Vault and PKI (run after start)
 	@echo "🔧 Initializing Vault and PKI..."
+	@sleep 3
 	./vault-init.sh
 
 demo: ## Run the interactive PKI certificate demo
