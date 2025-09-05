@@ -148,6 +148,7 @@ The included `pki-demo.sh` script provides an interactive demonstration of:
 - ✅ Root and Intermediate CA creation
 - ✅ Certificate role configuration  
 - ✅ Certificate issuance with SANs and IP SANs
+- ✅ Certificate metadata storage and retrieval
 - ✅ Certificate chain verification
 - ✅ Certificate revocation and CRL management
 - ✅ File-based certificate management

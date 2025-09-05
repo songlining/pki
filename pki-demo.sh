@@ -180,6 +180,28 @@ echo "  • ⏰ expiration: Unix timestamp of expiration"
 wait
 clear
 
+# Issue certificate with metadata
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║            Step 8.5: Issue Certificate with Metadata          ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo "HashiCorp Vault supports adding custom metadata to certificates:"
+echo ""
+echo "🏷️  First, let's create metadata for our certificate:"
+pe "echo '{\"department\": \"Engineering\", \"owner\": \"DevOps Team\", \"application\": \"Web Server\", \"environment\": \"Production\", \"cost_center\": \"CC-1001\"}' | base64 > cert_metadata.txt"
+pe "cat cert_metadata.txt"
+
+echo ""
+echo "📝 Now issue a certificate with metadata:"
+pe "vault write -field=serial_number pki_int/issue/web-server common_name=\"metadata.example.com\" ttl=\"24h\" cert_metadata=\$(cat cert_metadata.txt) > cert_serial.txt"
+pe "cat cert_serial.txt"
+
+echo ""
+echo "✅ Certificate with metadata issued successfully!"
+wait
+clear
+
 # Save certificate components to files
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
@@ -200,10 +222,31 @@ pe "ls -la *.pem *.crt *.csr"
 wait
 clear
 
+# Retrieve certificate metadata
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║             Step 10: Retrieve Certificate Metadata            ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo "Let's retrieve and examine the certificate metadata we stored:"
+echo ""
+echo "📋 List all certificates with metadata:"
+pe "vault list pki_int/cert-metadata/"
+echo ""
+echo "🔍 Read metadata for our certificate:"
+pe "vault read pki_int/cert-metadata/\$(cat cert_serial.txt)"
+echo ""
+echo "🎯 Decode the metadata to see the original JSON:"
+pe "vault read -field=cert_metadata pki_int/cert-metadata/\$(cat cert_serial.txt) | base64 -d"
+echo ""
+echo "✅ Certificate metadata successfully retrieved and decoded!"
+wait
+clear
+
 # Verify certificate details
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║             Step 10: Verify Certificate Details               ║"
+echo "║             Step 11: Verify Certificate Details               ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${COLOR_RESET}"
 echo "Let's examine the certificate we just issued:"
@@ -221,7 +264,7 @@ clear
 # Show certificate chain
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║              Step 11: Examine Certificate Chain               ║"
+echo "║              Step 12: Examine Certificate Chain               ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${COLOR_RESET}"
 echo "Let's verify our certificate chain is properly constructed:"
@@ -236,7 +279,7 @@ clear
 # Revoke a certificate
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║              Step 12: Certificate Revocation                  ║"
+echo "║              Step 13: Certificate Revocation                  ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${COLOR_RESET}"
 echo "Demonstrate certificate revocation capabilities:"
@@ -260,7 +303,7 @@ clear
 # Show CRL
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║           Step 13: Certificate Revocation List                ║"
+echo "║           Step 14: Certificate Revocation List                ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${COLOR_RESET}"
 echo "View the Certificate Revocation List:"
@@ -285,6 +328,8 @@ echo "  ✅ Configured Vault Enterprise PKI engines"
 echo "  ✅ Generated root and intermediate Certificate Authorities"
 echo "  ✅ Created certificate roles with domain restrictions"
 echo "  ✅ Issued multiple server certificates with SANs and IP SANs"
+echo "  ✅ Added custom metadata to certificates for tracking"
+echo "  ✅ Retrieved and decoded certificate metadata"
 echo "  ✅ Saved certificate components to files"
 echo "  ✅ Verified certificate chain integrity"
 echo "  ✅ Demonstrated certificate revocation"
