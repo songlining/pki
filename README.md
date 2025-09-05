@@ -1,11 +1,10 @@
 # Vault Enterprise PKI Setup
 
-This project demonstrates how to set up HashiCorp Vault Enterprise in Docker Compose with licensing and PKI capabilities.
+This project demonstrates how to set up HashiCorp Vault Enterprise in Docker Compose development mode with full PKI capabilities.
 
 ## Prerequisites
 
 - Docker and Docker Compose installed
-- A valid Vault Enterprise license file (`vault.hclic`)
 - Vault CLI installed (for initialization and management)
 
 ## Quick Start
@@ -37,7 +36,7 @@ This project demonstrates how to set up HashiCorp Vault Enterprise in Docker Com
 ### `docker-compose.yml`
 - Uses `hashicorp/vault-enterprise` image
 - Runs in development mode with auto-unsealing
-- Mounts license file and configuration directory
+- All Enterprise features available without licensing
 - Exposes Vault on port 8200
 
 ### `.env`
@@ -46,13 +45,10 @@ Contains environment variables:
 - `VAULT_TOKEN`: Root token for authentication
 - `VAULT_DEV_ROOT_TOKEN_ID`: Development mode root token
 
-### `vault.hclic`
-Your Vault Enterprise license file. This file must contain a valid license key.
-
 ### `vault-init.sh`
 Initialization script that:
 - Waits for Vault to be ready
-- Verifies license status
+- Verifies Enterprise features are available
 - Enables PKI secrets engines
 - Configures appropriate lease TTLs
 
@@ -101,22 +97,24 @@ vault write pki/config/urls \
 
 ## Development Mode Notes
 
-This setup uses Vault in development mode, which means:
+This setup uses Vault Enterprise in development mode, which means:
+- ✅ **All Enterprise features**: Full access to Enterprise capabilities without licensing
 - ✅ **Auto-unsealing**: No manual unseal process required
 - ✅ **In-memory storage**: No persistent storage (data lost on restart)
 - ✅ **Pre-configured root token**: Uses `myroot` as the root token
 - ✅ **TLS disabled**: HTTP-only for easier development
+- ✅ **Certificate metadata**: Enterprise PKI features like certificate metadata work out of the box
 - ⚠️  **Not for production**: Development mode is not secure for production use
 
 ## Troubleshooting
 
-### License Issues
+### Enterprise Features
 ```bash
-# Check license status
-vault read sys/license
+# Verify Enterprise features are available
+vault read sys/health | grep enterprise
 
-# Verify license file exists and is readable
-ls -la vault.hclic
+# Check Vault Enterprise version
+vault version
 ```
 
 ### Connection Issues
@@ -184,7 +182,6 @@ make clean    # Clean up everything
 .
 ├── docker-compose.yml    # Docker Compose configuration
 ├── .env                 # Environment variables
-├── vault.hclic          # Vault Enterprise license
 ├── vault-init.sh        # Initialization script
 ├── pki-demo.sh          # Interactive PKI demo
 ├── demo-magic.sh        # Demo presentation framework
