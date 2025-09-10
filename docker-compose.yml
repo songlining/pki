@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   vault:
-    image: hashicorp/vault-enterprise
+    image: hashicorp/vault:latest
     container_name: vault-enterprise
     environment:
       VAULT_DEV_ROOT_TOKEN_ID: "${VAULT_DEV_ROOT_TOKEN_ID}"
@@ -22,9 +22,24 @@ services:
     hostname: vault.local
     command: vault server -dev -dev-root-token-id="${VAULT_DEV_ROOT_TOKEN_ID}" -dev-listen-address="0.0.0.0:8200"
 
+  vault-agent:
+    image: hashicorp/vault:latest
+    container_name: vault-agent
+    depends_on:
+      - vault
+    volumes:
+      - ./vault-agent-config:/vault/config
+      - ./vault-agent-output:/vault/agent
+    ports:
+      - "8100:8100"
+    networks:
+      - vault-network
+    command: vault agent -config=/vault/config/agent.hcl
+
 volumes:
   vault_data:
   vault_logs:
+  vault_agent_data:
 
 networks:
   vault-network:

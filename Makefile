@@ -27,6 +27,10 @@ demo: ## Run the interactive PKI certificate demo
 	@echo "🎭 Starting PKI certificate demo..."
 	./pki-demo.sh
 
+agent-demo: ## Run Vault Agent PKI demo
+	@echo "🤖 Starting Vault Agent PKI demo..."
+	./agent-pki-demo.sh
+
 clean: ## Clean up demo artifacts and containers
 	@echo "🧹 Cleaning up demo artifacts..."
 	rm -f *.crt *.csr *.key *.pem *.txt
