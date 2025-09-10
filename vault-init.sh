@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# HashiCorp Vault Enterprise Initialization Script
-# This script sets up Vault Enterprise with PKI capabilities
+# HashiCorp Vault Initialization Script
+# This script sets up Vault with PKI capabilities
 
 set -e
 
@@ -21,7 +21,7 @@ fi
 export VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
 export VAULT_TOKEN="${VAULT_TOKEN:-myroot}"
 
-echo -e "${BLUE}🚀 HashiCorp Vault Enterprise Setup${NC}"
+echo -e "${BLUE}🚀 HashiCorp Vault PKI Setup${NC}"
 echo "===================================="
 
 # Wait for Vault to be ready
@@ -42,13 +42,10 @@ done
 echo -e "${GREEN}✅ Vault is ready!${NC}"
 vault status
 
-# Verify Enterprise features are available
-echo -e "${YELLOW}🔑 Verifying Vault Enterprise features...${NC}"
-if vault read sys/health | grep -q "enterprise.*true"; then
-    echo -e "${GREEN}✅ Vault Enterprise is running with all features available!${NC}"
-else
-    echo -e "${RED}❌ Enterprise features verification failed${NC}"
-fi
+# Check Vault version for informational purposes
+echo -e "${YELLOW}ℹ️  Checking Vault version...${NC}"
+VAULT_VERSION=$(vault version | head -1)
+echo -e "${BLUE}${VAULT_VERSION}${NC}"
 
 # Enable PKI secrets engine if not already enabled
 echo -e "${YELLOW}🔧 Enabling PKI secrets engine...${NC}"
@@ -76,7 +73,7 @@ fi
 echo -e "${YELLOW}⏰ Configuring PKI intermediate max lease TTL...${NC}"
 vault secrets tune -max-lease-ttl=43800h pki_int
 
-echo -e "${GREEN}🎉 Vault Enterprise setup complete!${NC}"
+echo -e "${GREEN}🎉 Vault PKI setup complete!${NC}"
 echo ""
 echo -e "${BLUE}Vault Information:${NC}"
 echo "=================="
@@ -85,4 +82,4 @@ echo -e "Vault Root Token: ${GREEN}${VAULT_TOKEN}${NC}"
 echo -e "PKI Path: ${GREEN}pki/${NC}"
 echo -e "PKI Intermediate Path: ${GREEN}pki_int/${NC}"
 echo ""
-echo -e "${YELLOW}💡 Your Vault Enterprise instance is ready for PKI operations!${NC}"
+echo -e "${YELLOW}💡 Your Vault instance is ready for PKI operations!${NC}"

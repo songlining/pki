@@ -27,9 +27,17 @@ demo: ## Run the interactive PKI certificate demo
 	@echo "🎭 Starting PKI certificate demo..."
 	./pki-demo.sh
 
-agent-demo: ## Run Vault Agent PKI demo
-	@echo "🤖 Starting Vault Agent PKI demo..."
+agent-demo: ## Run Vault Agent PKI demo with 30s rotation
+	@echo "🤖 Starting Vault Agent PKI demo with 30-second rotation..."
 	./agent-pki-demo.sh
+
+setup-agent: ## Setup Vault Agent credentials
+	@echo "🔧 Setting up Vault Agent credentials..."
+	./setup-agent-credentials.sh
+
+watch-rotation: ## Watch certificate rotation in real-time
+	@echo "👀 Starting certificate rotation monitor..."
+	./watch-rotation.sh
 
 clean: ## Clean up demo artifacts and containers
 	@echo "🧹 Cleaning up demo artifacts..."
@@ -37,8 +45,8 @@ clean: ## Clean up demo artifacts and containers
 	docker-compose down -v
 	@echo "✅ Cleanup complete!"
 
-setup: start init ## Complete setup (start + init)
-	@echo "🎉 Setup complete! Run 'make demo' to start the PKI demonstration."
+setup: start init setup-agent ## Complete setup (start + init + agent)
+	@echo "🎉 Setup complete! Run 'make demo' or 'make agent-demo' to start demonstrations."
 
 status: ## Show status of Vault service
 	@echo "📊 Service Status:"
