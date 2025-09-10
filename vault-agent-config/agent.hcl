@@ -46,3 +46,10 @@ template {
   destination = "/vault/agent/ca.crt"
   perms = 0644
 }
+
+template {
+  source = "/vault/config/env.tpl"
+  destination = "/vault/agent/app.env"
+  perms = 0644
+  command = "/bin/sh /vault/config/restart-app.sh"
+}
