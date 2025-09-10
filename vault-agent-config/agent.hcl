@@ -31,18 +31,18 @@ listener "tcp" {
 
 template {
   source = "/vault/config/cert.tpl"
-  destination = "/tmp/app.crt"
+  destination = "/vault/agent/app.crt"
   perms = 0644
 }
 
 template {
   source = "/vault/config/key.tpl"
-  destination = "/tmp/app.key"
+  destination = "/vault/agent/app.key"
   perms = 0600
 }
 
 template {
   source = "/vault/config/ca.tpl"
-  destination = "/tmp/ca.crt"
+  destination = "/vault/agent/ca.crt"
   perms = 0644
 }

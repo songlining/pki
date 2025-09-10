@@ -27,6 +27,18 @@ setup_credentials() {
         ./setup-agent-credentials.sh
     else
         echo "   ✅ Credential files exist"
+        
+        # Validate credentials work by testing authentication
+        ROLE_ID=$(cat vault-agent-config/role-id)
+        SECRET_ID=$(cat vault-agent-config/secret-id)
+        
+        # Test if credentials can authenticate
+        if ! vault write -field=token auth/approle/login role_id="$ROLE_ID" secret_id="$SECRET_ID" >/dev/null 2>&1; then
+            echo "   ⚠️  Credentials invalid, regenerating..."
+            ./setup-agent-credentials.sh
+        else
+            echo "   ✅ Credentials validated successfully"
+        fi
     fi
     
     # Ensure credentials are available in the container
@@ -170,13 +182,13 @@ echo "   - Auto-rotate certificates before expiry"
 
 echo
 echo "   📁 Template files configured:"
-echo "   - cert.tpl -> /tmp/app.crt (certificate)"
-echo "   - key.tpl  -> /tmp/app.key (private key)"
-echo "   - ca.tpl   -> /tmp/ca.crt (CA certificate)"
+echo "   - cert.tpl -> /vault/agent/app.crt (certificate)"
+echo "   - key.tpl  -> /vault/agent/app.key (private key)"
+echo "   - ca.tpl   -> /vault/agent/ca.crt (CA certificate)"
 
 echo
 echo "   🔍 Current template-generated files:"
-docker exec vault-agent ls -la /tmp/app.* /tmp/ca.crt 2>/dev/null || echo "   (Templates are rendering...)"
+docker exec vault-agent ls -la /vault/agent/app.* /vault/agent/ca.crt 2>/dev/null || echo "   (Templates are rendering...)"
 wait_for_user
 
 echo -e "${BLUE}"
@@ -220,7 +232,7 @@ echo
 echo "   🔄 When templates render, Vault Agent:"
 echo "   1. Calls PKI API with specified parameters"
 echo "   2. Receives certificate, key, and CA data"
-echo "   3. Writes data to destination files (/tmp/app.*)"
+echo "   3. Writes data to destination files (/vault/agent/app.*)"
 echo "   4. Sets proper file permissions"
 echo "   5. Schedules next renewal before expiry"
 wait_for_user
@@ -231,22 +243,22 @@ echo "║          Step 7: Certificate Details & Verification           ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${COLOR_RESET}"
 echo "Inspecting auto-generated certificate details:"
-if docker exec vault-agent test -f /tmp/app.crt; then
+if docker exec vault-agent test -f /vault/agent/app.crt; then
     echo "   Certificate subject and validity:"
-    docker exec vault-agent cat /tmp/app.crt | openssl x509 -noout -subject -dates
+    docker exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -subject -dates
     
     echo
     echo "   Certificate content preview:"
-    docker exec vault-agent head -3 /tmp/app.crt
-    docker exec vault-agent tail -3 /tmp/app.crt
+    docker exec vault-agent head -3 /vault/agent/app.crt
+    docker exec vault-agent tail -3 /vault/agent/app.crt
     
     echo
     echo "   🔐 Private key file permissions:"
-    docker exec vault-agent ls -la /tmp/app.key
+    docker exec vault-agent ls -la /vault/agent/app.key
     
     echo
     echo "   📜 CA Certificate:"
-    docker exec vault-agent head -2 /tmp/ca.crt
+    docker exec vault-agent head -2 /vault/agent/ca.crt
     
 else
     echo "   ⏳ Templates are still rendering, please wait a moment..."
@@ -274,9 +286,9 @@ echo
 show_cert_info() {
     local label="$1"
     echo "   📋 $label:"
-    if docker exec vault-agent test -f /tmp/app.crt; then
-        local cert_info=$(docker exec vault-agent cat /tmp/app.crt | openssl x509 -noout -subject -dates -serial 2>/dev/null)
-        local file_time=$(docker exec vault-agent stat -c %Y /tmp/app.crt)
+    if docker exec vault-agent test -f /vault/agent/app.crt; then
+        local cert_info=$(docker exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -subject -dates -serial 2>/dev/null)
+        local file_time=$(docker exec vault-agent stat -c %Y /vault/agent/app.crt)
         echo "      Subject: $(echo "$cert_info" | grep subject | cut -d= -f2-)"
         echo "      Serial:  $(echo "$cert_info" | grep serial | cut -d= -f2)"
         echo "      Valid:   $(echo "$cert_info" | grep notBefore | cut -d= -f2-)"
@@ -298,16 +310,16 @@ echo
 
 # Wait and monitor for rotation (check every 5 seconds for up to 45 seconds)
 INITIAL_SERIAL=""
-if docker exec vault-agent test -f /tmp/app.crt; then
-    INITIAL_SERIAL=$(docker exec vault-agent cat /tmp/app.crt | openssl x509 -noout -serial 2>/dev/null | cut -d= -f2)
+if docker exec vault-agent test -f /vault/agent/app.crt; then
+    INITIAL_SERIAL=$(docker exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -serial 2>/dev/null | cut -d= -f2)
 fi
 
 ROTATION_DETECTED=false
 for i in {1..9}; do
     echo "   Checking... ($((i*5)) seconds elapsed)"
     
-    if docker exec vault-agent test -f /tmp/app.crt; then
-        CURRENT_SERIAL=$(docker exec vault-agent cat /tmp/app.crt | openssl x509 -noout -serial 2>/dev/null | cut -d= -f2)
+    if docker exec vault-agent test -f /vault/agent/app.crt; then
+        CURRENT_SERIAL=$(docker exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -serial 2>/dev/null | cut -d= -f2)
         
         if [ "$CURRENT_SERIAL" != "$INITIAL_SERIAL" ] && [ -n "$INITIAL_SERIAL" ]; then
             echo
