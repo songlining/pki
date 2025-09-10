@@ -6,6 +6,28 @@ This project demonstrates how to set up HashiCorp Vault Enterprise in Docker Com
 
 - Docker and Docker Compose installed
 - Vault CLI installed (for initialization and management)
+- **HashiCorp Vault Enterprise license file** (see setup instructions below)
+
+## License Setup (Required)
+
+**Before starting, you need a Vault Enterprise license file:**
+
+1. **Obtain a license**:
+   - Get a trial or full license from HashiCorp
+   - Download the license file (`.hclic` format)
+
+2. **Place the license file**:
+   ```bash
+   # Copy your license file to the project root as 'vault.hclic'
+   cp /path/to/your-license.hclic ./vault.hclic
+   ```
+
+3. **Verify the license file exists**:
+   ```bash
+   ls -la vault.hclic
+   ```
+
+⚠️  **Without a valid license file, Vault Enterprise will start but fail when accessing Enterprise features or certain storage backends.**
 
 ## Quick Start
 
@@ -36,8 +58,14 @@ This project demonstrates how to set up HashiCorp Vault Enterprise in Docker Com
 ### `docker-compose.yml`
 - Uses `hashicorp/vault-enterprise` image
 - Runs in development mode with auto-unsealing
-- All Enterprise features available without licensing
+- Mounts license file from `./vault.hclic` to `/vault/config/vault.hclic`
 - Exposes Vault on port 8200
+
+### `vault.hclic` (Required)
+- HashiCorp Vault Enterprise license file
+- Must be placed in the project root directory
+- Automatically mounted into the container
+- **Added to `.gitignore` to prevent accidental commits**
 
 ### `.env`
 Contains environment variables:
@@ -98,15 +126,29 @@ vault write pki/config/urls \
 ## Development Mode Notes
 
 This setup uses Vault Enterprise in development mode, which means:
-- ✅ **All Enterprise features**: Full access to Enterprise capabilities without licensing
+- ✅ **All Enterprise features**: Full access to Enterprise capabilities with valid license
 - ✅ **Auto-unsealing**: No manual unseal process required
-- ✅ **In-memory storage**: No persistent storage (data lost on restart)
+- ✅ **Raft storage**: Persistent storage for Enterprise compliance (data survives restarts)
 - ✅ **Pre-configured root token**: Uses `myroot` as the root token
 - ✅ **TLS disabled**: HTTP-only for easier development
 - ✅ **Certificate metadata**: Enterprise PKI features like certificate metadata work out of the box
+- ⚠️  **License required**: Valid Enterprise license file must be provided
 - ⚠️  **Not for production**: Development mode is not secure for production use
 
 ## Troubleshooting
+
+### License Issues
+```bash
+# Check if license file exists
+ls -la vault.hclic
+
+# Check license loading in container logs
+docker-compose logs vault | grep -i license
+
+# Common license errors:
+# "license check failed: no autoloaded license provided" = Missing license file
+# "permission denied" = License file permissions issue
+```
 
 ### Enterprise Features
 ```bash
@@ -115,6 +157,9 @@ vault read sys/health | grep enterprise
 
 # Check Vault Enterprise version
 vault version
+
+# Check license status (after Vault is running)
+vault read sys/license/status
 ```
 
 ### Connection Issues
