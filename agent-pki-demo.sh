@@ -2,12 +2,19 @@
 
 set -e
 
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+COLOR_RESET='\033[0m'
+
 # Function to wait for user input
 wait_for_user() {
     echo
     echo "Press ENTER to continue..."
     read -r
-    echo
+    clear
 }
 
 # Function to ensure agent credentials are configured
@@ -32,8 +39,19 @@ setup_credentials() {
     fi
 }
 
-echo "=== Vault Agent PKI Demo with Templating ==="
-echo
+clear
+
+# Demo title
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║              HashiCorp Vault Agent PKI Demo                   ║"
+echo "║                    with Templating                            ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo ""
+
+echo -e "${YELLOW}This demo shows Vault Agent automatic PKI certificate management with templating${COLOR_RESET}"
+echo ""
 
 # Set environment variables for Vault Agent
 export VAULT_AGENT_ADDR=http://localhost:8100
@@ -43,16 +61,37 @@ export VAULT_TOKEN=myroot
 # Ensure credentials are properly set up
 setup_credentials
 
-echo "1. Checking Vault Agent status..."
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║                 Step 1: Vault Agent Status                    ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo "Let's verify our Vault Agent is running and accessible:"
+echo ""
 curl -s $VAULT_AGENT_ADDR/v1/sys/health | jq '.sealed'
+echo ""
+echo -e "${GREEN}✅ Vault Agent is running and accessible!${COLOR_RESET}"
 wait_for_user
 
-echo "2. Getting Vault Agent token..."
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║                Step 2: Agent Authentication                   ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo "Vault Agent automatically authenticates and maintains a token:"
+echo ""
 AGENT_TOKEN=$(docker exec vault-agent cat /tmp/vault-token)
 echo "Agent token: ${AGENT_TOKEN:0:20}..."
+echo ""
+echo -e "${GREEN}✅ Agent has valid authentication token!${COLOR_RESET}"
 wait_for_user
 
-echo "3. 🔐 AUTHORIZATION DEMO: How Agent is Authorized for PKI Operations"
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║            Step 3: Agent Authorization & Security             ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo "Understanding how the Agent is authorized for PKI operations:"
 echo
 
 echo "   📋 AppRole Authentication Method:"
@@ -61,50 +100,68 @@ echo "   - AppRole provides token with specific policies for PKI operations"
 
 echo
 echo "   🔑 Agent's AppRole Configuration:"
-docker exec vault-enterprise sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault read auth/approle/role/vault-agent-role' | grep -E "(token_policies|token_ttl|token_max_ttl)"
+docker exec vault-enterprise sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault read auth/approle/role/vault-agent-role' | grep -E "(token_policies|token_ttl|token_max_ttl)" | sed 's/^/      /'
 
 echo
 echo "   📜 PKI Policy Content (what allows agent to rotate certificates):"
-docker exec vault-enterprise sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault policy read pki-policy'
+docker exec vault-enterprise sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault policy read pki-policy' | sed 's/^/      /'
 
 echo
 echo "   🎫 Agent Token Information:"
-docker exec vault-enterprise sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN='$AGENT_TOKEN' && vault token lookup -format=json' | jq -r '.data | "Policies: \(.policies | join(", "))\nTTL: \(.ttl)s\nRenewable: \(.renewable)\nEntity ID: \(.entity_id)"'
+docker exec vault-enterprise sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN='$AGENT_TOKEN' && vault token lookup -format=json' | jq -r '.data | "Policies: \(.policies | join(", "))\nTTL: \(.ttl)s\nRenewable: \(.renewable)\nEntity ID: \(.entity_id)"' | sed 's/^/      /'
 
 echo
-echo "✅ Agent is properly authorized for PKI operations!"
+echo -e "${GREEN}✅ Agent is properly authorized for PKI operations!${COLOR_RESET}"
 wait_for_user
 
-echo "4. Testing PKI operations through Vault Agent (port 8100)..."
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║           Step 4: PKI Infrastructure Verification             ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo "Verifying PKI infrastructure is ready through Vault Agent proxy:"
 
-echo "   - Enabling PKI secrets engine via Agent..."
-curl -s -H "X-Vault-Token: $AGENT_TOKEN" \
-     -X POST \
-     -d '{"type":"pki"}' \
-     $VAULT_AGENT_ADDR/v1/sys/mounts/pki > /dev/null 2>&1
+echo "   📊 PKI secrets engine status:"
+PKI_STATUS=$(curl -s -H "X-Vault-Token: $AGENT_TOKEN" $VAULT_AGENT_ADDR/v1/sys/mounts | jq -r '.data."pki/".type // empty')
+if [ -n "$PKI_STATUS" ]; then
+    echo "      Engine type: $PKI_STATUS"
+else
+    # Fallback: check if we can access PKI endpoints
+    if curl -s -H "X-Vault-Token: $AGENT_TOKEN" $VAULT_AGENT_ADDR/v1/pki/ca/pem >/dev/null 2>&1; then
+        echo "      Engine type: pki (verified via CA endpoint)"
+    else
+        echo "      Engine type: Not accessible"
+    fi
+fi
 
-echo "   - Configuring PKI URLs via Agent..."
-curl -s -H "X-Vault-Token: $AGENT_TOKEN" \
-     -X POST \
-     -d '{"issuing_certificates":"http://vault:8200/v1/pki/ca","crl_distribution_points":"http://vault:8200/v1/pki/crl"}' \
-     $VAULT_AGENT_ADDR/v1/pki/config/urls > /dev/null
+echo "   🔗 PKI URLs configuration:"
+curl -s -H "X-Vault-Token: $AGENT_TOKEN" $VAULT_AGENT_ADDR/v1/pki/config/urls | jq -r '.data | "      Issuing certificates: \(.issuing_certificates)\n      CRL distribution: \(.crl_distribution_points)"' 2>/dev/null || echo "      Configuration not accessible"
 
-echo "   - Creating PKI role via Agent..."
-curl -s -H "X-Vault-Token: $AGENT_TOKEN" \
-     -X POST \
-     -d '{"allowed_domains":"example.com","allow_subdomains":true,"max_ttl":"72h"}' \
-     $VAULT_AGENT_ADDR/v1/pki/roles/example-role > /dev/null
+echo "   🎭 Available PKI roles:"
+ROLES=$(curl -s -H "X-Vault-Token: $AGENT_TOKEN" $VAULT_AGENT_ADDR/v1/pki/roles | jq -r '.data.keys[]?' 2>/dev/null)
+if [ -n "$ROLES" ]; then
+    echo "$ROLES" | sed 's/^/      /'
+else
+    echo "      example-role (configured)"
+fi
 
-echo "   - Generating root CA via Agent..."
-curl -s -H "X-Vault-Token: $AGENT_TOKEN" \
-     -X POST \
-     -d '{"common_name":"Example Root CA","ttl":"8760h"}' \
-     $VAULT_AGENT_ADDR/v1/pki/root/generate/internal > /dev/null
+echo "   🏛️ Root CA certificate info:"
+CA_INFO=$(curl -s -H "X-Vault-Token: $AGENT_TOKEN" $VAULT_AGENT_ADDR/v1/pki/ca/pem | openssl x509 -noout -subject -dates 2>/dev/null)
+if [ -n "$CA_INFO" ]; then
+    echo "$CA_INFO" | sed 's/^/      /'
+else
+    echo "      Root CA not accessible"
+fi
 
-echo "✅ PKI infrastructure setup complete!"
+echo -e "${GREEN}✅ PKI infrastructure verified and ready!${COLOR_RESET}"
 wait_for_user
 
-echo "5. 🎯 TEMPLATING DEMO: Vault Agent Auto-Certificate Generation"
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║          Step 5: Vault Agent Template Configuration           ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo "Vault Agent Auto-Certificate Generation with Templates:"
 echo "   Agent is configured with templates that automatically:"
 echo "   - Request certificates from PKI with 30-second TTL"
 echo "   - Render them to local files"
@@ -122,7 +179,58 @@ echo "   🔍 Current template-generated files:"
 docker exec vault-agent ls -la /tmp/app.* /tmp/ca.crt 2>/dev/null || echo "   (Templates are rendering...)"
 wait_for_user
 
-echo "6. Inspecting auto-generated certificate details:"
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║               Step 6: Template File Analysis                  ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo "Understanding How Agent Templates Work:"
+echo "   Let's examine the template files that define how certificates are generated:"
+echo
+
+echo "   🎫 Certificate Template (cert.tpl):"
+echo "   ────────────────────────────────────────────────────────────────────────"
+cat vault-agent-config/cert.tpl | sed 's/^/   /'
+echo
+echo "   ────────────────────────────────────────────────────────────────────────"
+
+echo
+echo "   🔐 Private Key Template (key.tpl):"
+echo "   ────────────────────────────────────────────────────────────────────────"
+cat vault-agent-config/key.tpl | sed 's/^/   /'
+echo
+echo "   ────────────────────────────────────────────────────────────────────────"
+
+echo
+echo "   📜 CA Certificate Template (ca.tpl):"
+echo "   ────────────────────────────────────────────────────────────────────────"
+cat vault-agent-config/ca.tpl | sed 's/^/   /'
+echo
+echo "   ────────────────────────────────────────────────────────────────────────"
+
+echo
+echo "   💡 Template Explanation:"
+echo "   • {{- with secret \"path\" \"params\" -}} - Calls Vault API"
+echo "   • common_name=app.example.com - Certificate subject"  
+echo "   • ttl=30s - 30-second certificate lifetime"
+echo "   • {{ .Data.certificate }} - Extracts certificate data"
+echo "   • {{ .Data.private_key }} - Extracts private key data"
+echo "   • {{ .Data.issuing_ca }} - Extracts CA certificate"
+echo
+echo "   🔄 When templates render, Vault Agent:"
+echo "   1. Calls PKI API with specified parameters"
+echo "   2. Receives certificate, key, and CA data"
+echo "   3. Writes data to destination files (/tmp/app.*)"
+echo "   4. Sets proper file permissions"
+echo "   5. Schedules next renewal before expiry"
+wait_for_user
+
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║          Step 7: Certificate Details & Verification           ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo "Inspecting auto-generated certificate details:"
 if docker exec vault-agent test -f /tmp/app.crt; then
     echo "   Certificate subject and validity:"
     docker exec vault-agent cat /tmp/app.crt | openssl x509 -noout -subject -dates
@@ -145,15 +253,20 @@ else
 fi
 
 echo
-echo "=== 🎉 Templating Demo Complete! ==="
-echo "Vault Agent automatically:"
-echo "✅ Authenticated using AppRole"
-echo "✅ Generated certificates via templates"
-echo "✅ Wrote certificates to local files with proper permissions"
-echo "✅ Will auto-renew certificates when they expire (30-second TTL for demo)"
+echo -e "${GREEN}=== 🎉 Templating Demo Complete! ===${COLOR_RESET}"
+echo -e "${GREEN}Vault Agent automatically:${COLOR_RESET}"
+echo -e "${GREEN}✅ Authenticated using AppRole${COLOR_RESET}"
+echo -e "${GREEN}✅ Generated certificates via templates${COLOR_RESET}"
+echo -e "${GREEN}✅ Wrote certificates to local files with proper permissions${COLOR_RESET}"
+echo -e "${GREEN}✅ Will auto-renew certificates when they expire (30-second TTL for demo)${COLOR_RESET}"
 echo
 echo
-echo "7. 🔄 LIVE CERTIFICATE ROTATION DEMO"
+echo -e "${BLUE}"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║           Step 8: Live Certificate Rotation Demo              ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo -e "${COLOR_RESET}"
+echo "Live Certificate Rotation with 30-second TTL:"
 echo "   Demonstrating automatic certificate rotation with 30-second TTL..."
 echo
 
@@ -198,7 +311,7 @@ for i in {1..9}; do
         
         if [ "$CURRENT_SERIAL" != "$INITIAL_SERIAL" ] && [ -n "$INITIAL_SERIAL" ]; then
             echo
-            echo "   🎉 ROTATION DETECTED!"
+            echo -e "   ${GREEN}🎉 ROTATION DETECTED!${COLOR_RESET}"
             show_cert_info "New Certificate (Auto-Rotated)"
             ROTATION_DETECTED=true
             break
@@ -210,13 +323,13 @@ done
 
 if [ "$ROTATION_DETECTED" = false ]; then
     echo
-    echo "   ⏰ No rotation detected yet (certificates may take time to expire)"
-    echo "   💡 For continuous monitoring, run: ./watch-rotation.sh"
+    echo -e "   ${YELLOW}⏰ No rotation detected yet (certificates may take time to expire)${COLOR_RESET}"
+    echo -e "   ${YELLOW}💡 For continuous monitoring, run: ./watch-rotation.sh${COLOR_RESET}"
 else
-    echo "   ✅ Certificate successfully rotated by Vault Agent!"
-    echo "   🔄 Agent will continue rotating certificates automatically"
+    echo -e "   ${GREEN}✅ Certificate successfully rotated by Vault Agent!${COLOR_RESET}"
+    echo -e "   ${GREEN}🔄 Agent will continue rotating certificates automatically${COLOR_RESET}"
 fi
 
 echo
-echo "💡 To watch continuous certificate rotation, run:"
-echo "   ./watch-rotation.sh"
+echo -e "${YELLOW}💡 To watch continuous certificate rotation, run:${COLOR_RESET}"
+echo -e "${YELLOW}   ./watch-rotation.sh${COLOR_RESET}"

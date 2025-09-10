@@ -73,6 +73,55 @@ fi
 echo -e "${YELLOW}⏰ Configuring PKI intermediate max lease TTL...${NC}"
 vault secrets tune -max-lease-ttl=43800h pki_int
 
+# Configure PKI URLs
+echo -e "${YELLOW}🔗 Configuring PKI URLs...${NC}"
+vault write pki/config/urls \
+    issuing_certificates="http://vault:8200/v1/pki/ca" \
+    crl_distribution_points="http://vault:8200/v1/pki/crl"
+
+# Generate root CA
+echo -e "${YELLOW}🏛️ Generating root CA certificate...${NC}"
+vault write pki/root/generate/internal \
+    common_name="Example Root CA" \
+    ttl=8760h
+
+# Create PKI role for demo
+echo -e "${YELLOW}🎭 Creating PKI role 'example-role'...${NC}"
+vault write pki/roles/example-role \
+    allowed_domains="example.com" \
+    allow_subdomains=true \
+    max_ttl="72h"
+
+# Enable AppRole authentication
+echo -e "${YELLOW}🔐 Enabling AppRole authentication...${NC}"
+if vault auth list | grep -q "approle/"; then
+    echo -e "${YELLOW}ℹ️  AppRole auth method already enabled${NC}"
+else
+    vault auth enable approle
+    echo -e "${GREEN}✅ AppRole auth method enabled!${NC}"
+fi
+
+# Create policy for PKI operations
+echo -e "${YELLOW}📋 Creating PKI policy...${NC}"
+vault policy write pki-policy - <<EOF
+path "pki/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+path "sys/mounts/pki" {
+  capabilities = ["create", "update"]
+}
+path "sys/mounts/pki/*" {
+  capabilities = ["create", "read", "update", "delete"]
+}
+EOF
+
+# Create AppRole for Vault Agent
+echo -e "${YELLOW}👤 Creating AppRole 'vault-agent-role'...${NC}"
+vault write auth/approle/role/vault-agent-role \
+    token_policies="pki-policy" \
+    token_ttl=1h \
+    token_max_ttl=4h
+
 echo -e "${GREEN}🎉 Vault PKI setup complete!${NC}"
 echo ""
 echo -e "${BLUE}Vault Information:${NC}"
