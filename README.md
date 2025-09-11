@@ -1,14 +1,23 @@
-# Vault Enterprise PKI Setup
+# HashiCorp Vault Enterprise PKI Demo with Vault Agent
 
-This project demonstrates how to set up HashiCorp Vault Enterprise in Docker Compose development mode with full PKI capabilities.
+This project demonstrates a complete HashiCorp Vault Enterprise PKI setup with Vault Agent for automatic certificate rotation and process supervision.
 
-## Prerequisites
+## 🚀 Features
+
+- **Vault Enterprise** with full PKI capabilities
+- **Vault Agent** for automatic certificate management
+- **30-second certificate rotation** for demo purposes
+- **Process supervisor** that restarts applications on certificate renewal
+- **Real-time monitoring** of certificate lifecycle
+- **Enterprise features** including certificate metadata and audit trails
+
+## 📋 Prerequisites
 
 - Docker and Docker Compose installed
 - Vault CLI installed (for initialization and management)
 - **HashiCorp Vault Enterprise license file** (see setup instructions below)
 
-## License Setup (Required)
+## 📝 License Setup (Required)
 
 **Before starting, you need a Vault Enterprise license file:**
 
@@ -27,217 +36,262 @@ This project demonstrates how to set up HashiCorp Vault Enterprise in Docker Com
    ls -la vault.hclic
    ```
 
-⚠️  **Without a valid license file, Vault Enterprise will start but fail when accessing Enterprise features or certain storage backends.**
+⚠️  **Without a valid license file, Vault Enterprise will start but fail when accessing Enterprise features.**
 
-## Quick Start
+## 🎯 Quick Start
 
-1. **Complete setup (start + initialize)**:
-   ```bash
-   make setup
-   ```
+### Complete Demo Setup
+```bash
+# Complete setup (start + initialize + agent configuration)
+make setup
 
-2. **Run the interactive demo**:
-   ```bash
-   make demo
-   ```
+# Run the Vault Agent PKI demo with 30-second rotation
+make agent-demo
 
-3. **Or do it manually**:
-   ```bash
-   # Start Vault Enterprise
-   make start
+# Or run the traditional interactive PKI demo
+make demo
+```
 
-   # Initialize Vault
-   make init
+### Step-by-Step Setup
+```bash
+# Start Vault Enterprise and Vault Agent
+make start
 
-   # Run the PKI certificate demo
-   make demo
-   ```
+# Initialize Vault and configure PKI
+make init
 
-## Configuration Files
+# Setup Vault Agent credentials
+make setup-agent
 
-### `docker-compose.yml`
-- Uses `hashicorp/vault-enterprise` image
-- Runs in development mode with auto-unsealing
-- Mounts license file from `./vault.hclic` to `/vault/config/vault.hclic`
-- Exposes Vault on port 8200
+# Run Vault Agent PKI demo
+make agent-demo
 
-### `vault.hclic` (Required)
-- HashiCorp Vault Enterprise license file
-- Must be placed in the project root directory
-- Automatically mounted into the container
-- **Added to `.gitignore` to prevent accidental commits**
+# Watch certificate rotation in real-time
+make watch-rotation
+```
 
-### `.env`
-Contains environment variables:
-- `VAULT_ADDR`: Vault server address
-- `VAULT_TOKEN`: Root token for authentication
-- `VAULT_DEV_ROOT_TOKEN_ID`: Development mode root token
+## 🏗️ Architecture
 
-### `vault-init.sh`
-Initialization script that:
-- Waits for Vault to be ready
-- Verifies Enterprise features are available
-- Enables PKI secrets engines
-- Configures appropriate lease TTLs
+This setup includes two main components:
 
-## Usage
+1. **Vault Enterprise Server** (`vault` container)
+   - PKI secrets engine with root and intermediate CAs
+   - AppRole authentication for Vault Agent
+   - Enterprise features enabled
+
+2. **Vault Agent** (`vault-agent` container)
+   - Automatic certificate rotation (30-second TTL for demo)
+   - Template-based certificate generation
+   - Process supervision with automatic restarts
+   - Real-time monitoring capabilities
+
+## 📁 Configuration Files
+
+### Core Configuration
+- `docker-compose.yml` - Multi-container setup with Vault Enterprise and Vault Agent
+- `.env` - Environment variables for Vault connection
+- `vault.hclic` - Vault Enterprise license file (required)
+- `vault-init.sh` - Initialization script for PKI setup
+
+### Vault Agent Configuration
+- `vault-agent-config/agent.hcl` - Vault Agent main configuration
+- `vault-agent-config/cert.tpl` - Certificate template
+- `vault-agent-config/key.tpl` - Private key template  
+- `vault-agent-config/env.tpl` - Environment variables template
+- `vault-agent-config/restart-app.sh` - Application restart script
+
+### Demo Scripts
+- `agent-pki-demo.sh` - Vault Agent PKI demo with 30-second rotation
+- `pki-demo.sh` - Traditional interactive PKI demo
+- `demo-process-supervisor.sh` - Process supervisor demonstration
+- `watch-rotation.sh` - Real-time certificate rotation monitor
+
+## 🎭 Demo Capabilities
+
+### Vault Agent PKI Demo (`make agent-demo`)
+- ✅ **Automatic certificate rotation** every 30 seconds
+- ✅ **Real-time certificate monitoring** with serial number tracking
+- ✅ **Process supervision** - applications restart on certificate renewal
+- ✅ **Template-based certificate generation**
+- ✅ **Environment variable injection**
+- ✅ **Certificate metadata integration**
+
+### Traditional PKI Demo (`make demo`)
+- ✅ Root and Intermediate CA creation
+- ✅ Certificate role configuration with short TTLs
+- ✅ Certificate issuance with SANs and IP SANs
+- ✅ Certificate metadata storage and retrieval
+- ✅ Certificate chain verification
+- ✅ Certificate revocation and CRL management
+
+## 🛠️ Usage
 
 ### Starting the Environment
 ```bash
-# Start containers
-docker-compose up -d
+# Start all containers (Vault Enterprise + Vault Agent)
+make start
 
-# Initialize Vault (first time only)
-./vault-init.sh
+# Check service status
+make status
 
-# Check status
-docker-compose ps
+# View container logs
+docker-compose logs -f
+```
+
+### Vault Agent Operations
+```bash
+# Monitor certificate rotation in real-time
+make watch-rotation
+
+# Check Vault Agent generated files
+ls -la vault-agent-output/
+
+# View current certificate information
+cat vault-agent-output/app.env
+```
+
+### PKI Operations
+```bash
+# Issue a certificate manually
+vault write pki/issue/example-role common_name="test.example.com" ttl="1h"
+
+# List issued certificates
+vault list pki/certs
+
+# Check certificate metadata
+vault read pki/cert/<serial-number>
 ```
 
 ### Stopping the Environment
 ```bash
 # Stop containers
-docker-compose down
+make stop
 
-# Remove volumes (optional - will delete all data)
-docker-compose down -v
+# Clean up everything (containers + volumes)
+make clean
 ```
 
-### Working with PKI
+## 🔧 Available Make Commands
 
-After initialization, you'll have two PKI engines enabled:
-
-- `pki/` - Root CA (max lease: 10 years)  
-- `pki_int/` - Intermediate CA (max lease: 5 years)
-
-Example PKI operations:
 ```bash
-# Generate root CA
-vault write -field=certificate pki/root/generate/internal \
-    common_name="My Root CA" \
-    ttl=87600h > root_ca.crt
-
-# Configure PKI URLs
-vault write pki/config/urls \
-    issuing_certificates="$VAULT_ADDR/v1/pki/ca" \
-    crl_distribution_points="$VAULT_ADDR/v1/pki/crl"
+make help           # Show all available commands
+make start          # Start Vault Enterprise and Vault Agent
+make stop           # Stop all containers
+make init           # Initialize Vault and configure PKI
+make setup-agent    # Setup Vault Agent credentials
+make setup          # Complete setup (start + init + agent)
+make demo           # Run traditional interactive PKI demo
+make agent-demo     # Run Vault Agent PKI demo with 30s rotation
+make watch-rotation # Watch certificate rotation in real-time
+make process-demo   # Run complete PKI + process supervisor demo
+make status         # Show service status
+make clean          # Clean up everything
 ```
 
-## Development Mode Notes
+## 📊 File Structure
 
-This setup uses Vault Enterprise in development mode, which means:
-- ✅ **All Enterprise features**: Full access to Enterprise capabilities with valid license
-- ✅ **Auto-unsealing**: No manual unseal process required
-- ✅ **Raft storage**: Persistent storage for Enterprise compliance (data survives restarts)
-- ✅ **Pre-configured root token**: Uses `myroot` as the root token
-- ✅ **TLS disabled**: HTTP-only for easier development
-- ✅ **Certificate metadata**: Enterprise PKI features like certificate metadata work out of the box
-- ⚠️  **License required**: Valid Enterprise license file must be provided
-- ⚠️  **Not for production**: Development mode is not secure for production use
+```
+.
+├── docker-compose.yml          # Multi-container setup
+├── .env                       # Environment variables
+├── vault.hclic               # Vault Enterprise license (required)
+├── vault-init.sh             # Vault initialization script
+├── Makefile                  # Build automation
+├── vault-agent-config/       # Vault Agent configuration
+│   ├── agent.hcl            # Main agent config
+│   ├── cert.tpl             # Certificate template
+│   ├── key.tpl              # Private key template
+│   ├── env.tpl              # Environment template
+│   ├── restart-app.sh       # Application restart script
+│   ├── role-id              # AppRole role ID
+│   └── secret-id            # AppRole secret ID
+├── vault-agent-output/       # Agent-generated files
+│   ├── app.crt              # Current certificate
+│   ├── app.key              # Current private key
+│   ├── ca.crt               # CA certificate
+│   └── app.env              # Environment variables
+├── demo-scripts/            # Demonstration scripts
+│   ├── agent-pki-demo.sh    # Vault Agent demo
+│   ├── pki-demo.sh          # Traditional PKI demo
+│   ├── demo-process-supervisor.sh # Process supervisor
+│   └── watch-rotation.sh    # Rotation monitor
+├── vault-config/            # Additional Vault config
+└── README.md               # This file
+```
 
-## Troubleshooting
+## ⚡ Vault Agent Features
+
+### Automatic Certificate Rotation
+- Certificates have 30-second TTL for demonstration
+- Vault Agent automatically renews certificates before expiration
+- Templates are re-rendered on each renewal
+
+### Process Supervision
+- Applications restart automatically when certificates are renewed
+- Environment variables are updated with new certificate metadata
+- Zero-downtime certificate rotation
+
+### Real-time Monitoring
+- Watch certificate serial numbers change in real-time
+- Monitor certificate expiration and renewal cycles
+- Track application restarts during rotation
+
+## 🔒 Security Notes
+
+- This setup uses development mode with auto-unsealing
+- Hardcoded root token (`myroot`) for development purposes
+- TLS is disabled for easier development and debugging
+- Certificate private keys have appropriate file permissions (0600)
+- **Never use this configuration in production**
+- All data is stored in Docker volumes and persists across restarts
+
+## 🐛 Troubleshooting
 
 ### License Issues
 ```bash
-# Check if license file exists
+# Check license file exists and is accessible
 ls -la vault.hclic
 
 # Check license loading in container logs
 docker-compose logs vault | grep -i license
 
-# Common license errors:
-# "license check failed: no autoloaded license provided" = Missing license file
-# "permission denied" = License file permissions issue
+# Verify Enterprise features
+vault read sys/health | grep enterprise
 ```
 
-### Enterprise Features
+### Vault Agent Issues
 ```bash
-# Verify Enterprise features are available
-vault read sys/health | grep enterprise
+# Check Vault Agent logs
+docker-compose logs vault-agent
 
-# Check Vault Enterprise version
-vault version
+# Verify Agent can connect to Vault
+docker exec vault-agent vault status
 
-# Check license status (after Vault is running)
-vault read sys/license/status
+# Check generated files
+ls -la vault-agent-output/
+```
+
+### Certificate Rotation
+```bash
+# Monitor rotation in real-time
+make watch-rotation
+
+# Check certificate expiration
+openssl x509 -in vault-agent-output/app.crt -noout -dates
+
+# Verify certificate chain
+openssl verify -CAfile vault-agent-output/ca.crt vault-agent-output/app.crt
 ```
 
 ### Connection Issues
 ```bash
-# Check if Vault is running
+# Check container status
 docker-compose ps
-
-# Check Vault logs
-docker-compose logs vault
 
 # Verify environment variables
 echo $VAULT_ADDR
 echo $VAULT_TOKEN
+
+# Test Vault connectivity
+curl $VAULT_ADDR/v1/sys/health
 ```
-
-### Container Issues
-```bash
-# Restart containers
-docker-compose restart
-
-# Clean restart (removes volumes)
-docker-compose down -v && docker-compose up -d
-```
-
-## PKI Certificate Demo
-
-The included `pki-demo.sh` script provides an interactive demonstration of:
-
-- ✅ Root and Intermediate CA creation
-- ✅ Certificate role configuration  
-- ✅ Certificate issuance with SANs and IP SANs
-- ✅ Certificate metadata storage and retrieval
-- ✅ Certificate chain verification
-- ✅ Certificate revocation and CRL management
-- ✅ File-based certificate management
-
-### Running the Demo
-
-```bash
-# Complete setup and run demo
-make setup && make demo
-
-# Or step by step
-make start    # Start containers
-make init     # Initialize Vault
-make demo     # Run interactive demo
-```
-
-The demo uses `demo-magic.sh` for paced presentation - press ENTER to advance through each step.
-
-## Available Commands
-
-```bash
-make help     # Show available commands
-make start    # Start Vault Enterprise
-make init     # Initialize and configure Vault
-make demo     # Run PKI certificate demo  
-make status   # Show service status
-make clean    # Clean up everything
-```
-
-## File Structure
-
-```
-.
-├── docker-compose.yml    # Docker Compose configuration
-├── .env                 # Environment variables
-├── vault-init.sh        # Initialization script
-├── pki-demo.sh          # Interactive PKI demo
-├── demo-magic.sh        # Demo presentation framework
-├── vault-config/        # Additional Vault configuration
-├── Makefile            # Build automation
-└── README.md           # This file
-```
-
-## Security Notes
-
-- The setup uses a hardcoded root token (`myroot`) for development
-- TLS is disabled for easier development
-- All data is stored in memory and will be lost when containers restart
-- **Never use this configuration in production**
