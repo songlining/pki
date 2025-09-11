@@ -51,6 +51,26 @@ setup_credentials() {
     fi
 }
 
+# Function to ensure PKI role exists
+setup_pki_role() {
+    echo "🔧 Ensuring PKI role exists for Vault Agent..."
+    
+    # Check if example-role exists
+    if ! vault read pki/roles/example-role >/dev/null 2>&1; then
+        echo "   Creating example-role for certificate generation..."
+        vault write pki/roles/example-role \
+            allowed_domains="example.com,localhost" \
+            allow_subdomains=true \
+            allow_localhost=true \
+            allow_ip_sans=true \
+            max_ttl="72h" \
+            ttl="30s" >/dev/null
+        echo "   ✅ PKI role created successfully"
+    else
+        echo "   ✅ PKI role already exists"
+    fi
+}
+
 clear
 
 # Demo title
@@ -72,6 +92,9 @@ export VAULT_TOKEN=myroot
 
 # Ensure credentials are properly set up
 setup_credentials
+
+# Ensure PKI role exists (critical after 'make demo' which resets PKI)
+setup_pki_role
 
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"

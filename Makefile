@@ -56,3 +56,11 @@ status: ## Show status of Vault service
 	@echo ""
 	@echo "Vault Status:"
 	@VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=myroot vault status 2>/dev/null || echo "Vault not accessible"
+
+process-demo: ## Run PKI demo followed by process supervisor demo
+	@echo "🎭 Running complete PKI + Process Supervisor demo..."
+	@$(MAKE) demo
+	@echo ""
+	@echo "🤖 Now starting Process Supervisor demo..."
+	@sleep 2
+	./demo-process-supervisor.sh

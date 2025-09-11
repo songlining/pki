@@ -88,6 +88,30 @@ setup_pki_role() {
     fi
 }
 
+# Function to ensure Vault Agent credentials are valid
+setup_agent_credentials() {
+    print_step "Checking Vault Agent credentials..."
+    
+    # Set environment variables for Vault access
+    export VAULT_ADDR=http://localhost:8200
+    export VAULT_TOKEN=myroot
+    
+    # Check if secret-id file exists and has content
+    if [ ! -f "vault-agent-config/secret-id" ] || [ ! -s "vault-agent-config/secret-id" ]; then
+        print_important "Secret-id missing or empty, regenerating..."
+        vault write -force -field=secret_id auth/approle/role/vault-agent-role/secret-id > vault-agent-config/secret-id
+        chmod 600 vault-agent-config/secret-id
+        print_success "New secret-id generated"
+        
+        # Restart Vault Agent to pick up new credentials
+        print_step "Restarting Vault Agent with new credentials..."
+        docker restart vault-agent >/dev/null
+        sleep 3
+    else
+        print_success "Agent credentials exist"
+    fi
+}
+
 # Function to show current certificate
 show_current_cert() {
     if [ -f "./vault-agent-output/app.crt" ]; then
@@ -130,9 +154,10 @@ main() {
     
     wait_for_user
     
-    # Step 1.5: Setup PKI role
-    print_header "Step 1.5: PKI Configuration"
+    # Step 1.5: Setup PKI role and credentials
+    print_header "Step 1.5: PKI Configuration & Credentials"
     setup_pki_role
+    setup_agent_credentials
     
     wait_for_user
     
