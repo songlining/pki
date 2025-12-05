@@ -33,12 +33,10 @@ vault secrets enable -path=pki_int pki 2>/dev/null || true
 vault secrets tune -max-lease-ttl=87600h pki 2>/dev/null || true  
 vault secrets tune -max-lease-ttl=43800h pki_int 2>/dev/null || true
 
-clear
-
 # Demo title
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║         HashiCorp Vault Enterprise PKI Certificate           ║"
+echo "║         HashiCorp Vault Enterprise PKI Certificate            ║"
 echo "║                    Issuance Demo                              ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${COLOR_RESET}"
@@ -47,7 +45,6 @@ echo ""
 echo -e "${YELLOW}This demo shows how to use HashiCorp Vault Enterprise for PKI certificate management${COLOR_RESET}"
 echo ""
 wait
-clear
 
 # Check Vault status
 echo -e "${BLUE}"
@@ -61,7 +58,6 @@ pe "vault status"
 echo ""
 echo "✅ Vault Enterprise is running in development mode (auto-unsealed)"
 wait
-clear
 
 # Show enabled secrets engines
 echo -e "${BLUE}"
@@ -77,7 +73,6 @@ echo "📋 Notice we have two PKI engines enabled:"
 echo "  • pki/     - Root Certificate Authority (10-year max lease)"
 echo "  • pki_int/ - Intermediate Certificate Authority (5-year max lease)"
 wait
-clear
 
 # Generate Root Certificate
 echo -e "${BLUE}"
@@ -92,7 +87,6 @@ echo ""
 echo "✅ Root certificate generated and saved to root-ca.crt"
 pe "ls -la root-ca.crt"
 wait
-clear
 
 # Configure PKI URLs
 echo -e "${BLUE}"
@@ -106,7 +100,6 @@ pe "vault write pki/config/urls issuing_certificates=\"http://localhost:8200/v1/
 echo ""
 echo "✅ PKI URLs configured for certificate distribution"
 wait
-clear
 
 # Create intermediate CA
 echo -e "${BLUE}"
@@ -130,7 +123,6 @@ pe "vault write pki_int/intermediate/set-signed certificate=@intermediate.crt"
 echo ""
 echo "✅ Intermediate CA configured and ready for certificate issuance"
 wait
-clear
 
 # Configure intermediate CA URLs
 echo -e "${BLUE}"
@@ -144,7 +136,6 @@ pe "vault write pki_int/config/urls issuing_certificates=\"http://localhost:8200
 echo ""
 echo "✅ Intermediate CA URLs configured"
 wait
-clear
 
 # Create a role for certificate issuance
 echo -e "${BLUE}"
@@ -158,7 +149,6 @@ pe "vault write pki_int/roles/web-server allowed_domains=\"example.com,demo.loca
 echo ""
 echo "✅ Certificate role 'web-server' created with domain restrictions"
 wait
-clear
 
 # Issue a certificate
 echo -e "${BLUE}"
@@ -178,7 +168,6 @@ echo "  • 🔐 private_key: The private key"
 echo "  • 📋 ca_chain: The certificate chain"
 echo "  • ⏰ expiration: Unix timestamp of expiration"
 wait
-clear
 
 # Issue certificate with metadata
 echo -e "${BLUE}"
@@ -200,7 +189,6 @@ pe "cat cert_serial.txt"
 echo ""
 echo "✅ Certificate with metadata issued successfully!"
 wait
-clear
 
 # Save certificate components to files
 echo -e "${BLUE}"
@@ -220,7 +208,6 @@ echo ""
 echo "✅ Certificate files saved:"
 pe "ls -la *.pem *.crt *.csr"
 wait
-clear
 
 # Retrieve certificate metadata
 echo -e "${BLUE}"
@@ -241,7 +228,6 @@ pe "vault read -field=cert_metadata pki_int/cert-metadata/\$(cat cert_serial.txt
 echo ""
 echo "✅ Certificate metadata successfully retrieved and decoded!"
 wait
-clear
 
 # Verify certificate details
 echo -e "${BLUE}"
@@ -259,7 +245,6 @@ echo "  • Issuer: Signed by our Intermediate CA"
 echo "  • Validity: 24-hour lifetime as requested"
 echo "  • Extensions: Subject Alternative Names, Key Usage, etc."
 wait
-clear
 
 # Show certificate chain
 echo -e "${BLUE}"
@@ -274,7 +259,6 @@ pe "openssl verify -CAfile root-ca.crt -untrusted intermediate.crt app-cert.pem"
 echo ""
 echo "✅ Certificate chain is valid and properly signed!"
 wait
-clear
 
 # Revoke a certificate
 echo -e "${BLUE}"
@@ -298,7 +282,6 @@ pe "vault write pki_int/revoke serial_number=\$(cat serial.txt)"
 echo ""
 echo "✅ Certificate successfully revoked and added to CRL"
 wait
-clear
 
 # Show CRL
 echo -e "${BLUE}"
@@ -312,7 +295,6 @@ pe "curl -s \$VAULT_ADDR/v1/pki_int/crl/pem | openssl crl -inform PEM -text -noo
 echo ""
 echo "📋 The CRL shows our revoked certificate serial number"
 wait
-clear
 
 # Cleanup and summary
 echo -e "${BLUE}"

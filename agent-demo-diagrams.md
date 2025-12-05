@@ -370,26 +370,24 @@ graph TB
     Client[Demo Script]
     
     Client -->|HTTP API| VaultServer
-    Client -->|HTTP API| AgentProxy
-    
-    subgraph DockerNetwork[Docker Network]
-        subgraph VaultContainer[Vault Container]
+
+    subgraph DockerNetwork[" "]
+        subgraph VaultContainer[" "]
             VaultServer[Vault Server]
             VaultServer --> PKIEngine
         end
         
-        subgraph AgentContainer[Vault Agent Container]
+        subgraph AgentContainer[" "]
             AgentProxy[Vault Agent]
             AgentProxy -->|Writes Files| OutputFiles
         end
         
         PKIEngine[PKI Secrets Engine<br/>Role: example-role<br/>TTL: 30s]
         
-        OutputFiles[Output Files<br/>app.crt, app.key, ca.crt]
+        OutputFiles[app.crt, app.key, ca.crt]
     end
     
-    AgentProxy -->| Auth| VaultServer
-    AgentProxy -->|Request Certs| PKIEngine
+    AgentProxy --> VaultServer
     
     style DockerNetwork fill:#fffacd
     style VaultContainer fill:#e6f3ff
