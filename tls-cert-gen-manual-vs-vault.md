@@ -61,7 +61,7 @@ sequenceDiagram
     Note over WebAdmin: Lifecycle Management (5 mins)
     WebAdmin->>WebAdmin: Set Calendar Reminder<br/>(Renew in 1 year)<br/>[5 mins]
 
-    Note over WebAdmin, CA: 🕐 TOTAL TIME: 2-4 Business Days<br/>Active Work: ~1.5-2.5 Hours<br/>Human Touchpoints: 2 Teams, 15+ Steps
+    Note over WebAdmin, CA: 🕐 TOTAL TIME: 2-4 Business Days<br/>Active Work: ~1.5-2.5 Hours<br/>Human Touchpoints: 2 Teams, 15+ Steps<br/>💰 LABOR COST: AUD$75-125 per certificate
 ```
 
 # Vault Generation Description (Automated)
@@ -115,3 +115,59 @@ sequenceDiagram
 | **Security** | **Low** (Private keys often moved around, permissions errors) | **High** (Private key never leaves the host, generated in memory) |
 | **Reliability** | **Low** (Forgot to renew = Outage) | **High** (Automated renewal, no outages) |
 | **Scalability** | **Linear Effort** (More servers = More work) | **Infinite** (1000 servers is same effort as 1) |
+
+# Cost Analysis (Based on AUD$50/hour)
+
+## Manual Workflow Cost Breakdown
+
+| Role | Task | Time | Cost |
+| :--- | :--- | ---: | ---: |
+| **Web Server Admin** | Research OpenSSL config | 20-30 mins | AUD$17-25 |
+| **Web Server Admin** | Generate key + CSR | 15 mins | AUD$12.50 |
+| **Web Server Admin** | Create ticket + attach CSR | 7 mins | AUD$6 |
+| **CA Admin** | Review + verify identity/SANs | 15-25 mins | AUD$12.50-21 |
+| **CA Admin** | Sign certificate + bundle | 10 mins | AUD$8 |
+| **CA Admin** | Deliver via ticket | 5 mins | AUD$4 |
+| **Web Server Admin** | Download + install + configure | 17-22 mins | AUD$14-18 |
+| **Web Server Admin** | Set renewal reminder | 5 mins | AUD$4 |
+| | **Total per certificate** | **1.5-2.5 hours** | **AUD$75-125** |
+
+### Annual Cost for Different Fleet Sizes
+
+| Fleet Size | Certificates/Year<br/>(1-year validity) | Annual Labor Cost |
+| :--- | ---: | ---: |
+| **10 servers** | 10 | AUD$750 - 1,250 |
+| **50 servers** | 50 | AUD$3,750 - 6,250 |
+| **100 servers** | 100 | AUD$7,500 - 12,500 |
+| **500 servers** | 500 | AUD$37,500 - 62,500 |
+| **1000 servers** | 1000 | AUD$75,000 - 125,000 |
+
+### With Shorter TTL (90-day certificates - industry best practice)
+
+| Fleet Size | Certificates/Year<br/>(90-day validity) | Annual Labor Cost |
+| :--- | ---: | ---: |
+| **10 servers** | 40 | AUD$3,000 - 5,000 |
+| **50 servers** | 200 | AUD$15,000 - 25,000 |
+| **100 servers** | 400 | AUD$30,000 - 50,000 |
+| **500 servers** | 2000 | AUD$150,000 - 250,000 |
+| **1000 servers** | 4000 | AUD$300,000 - 500,000 |
+
+## Vault Workflow Cost
+
+| Phase | Time | Frequency | Cost |
+| :--- | ---: | :--- | ---: |
+| **Initial Setup** (per server) | 30-60 mins | One-time | AUD$25-50 |
+| **Certificate Renewal** | ~1-2 seconds | Automatic | **AUD$0** |
+| **Ongoing Maintenance** | Minimal | Automated | **~AUD$0** |
+
+### ROI Analysis
+
+For a **100-server fleet** with **90-day certificate rotation**:
+
+- **Manual Process**: AUD$30,000 - 50,000/year (ongoing)
+- **Vault Initial Setup**: AUD$2,500 - 5,000 (one-time)
+- **Vault Ongoing Cost**: ~AUD$0/year
+- **First Year Savings**: AUD$25,000 - 45,000
+- **Annual Savings (Year 2+)**: AUD$30,000 - 50,000
+
+**Payback Period**: Immediate (first renewal cycle)
