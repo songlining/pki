@@ -27,37 +27,41 @@ sequenceDiagram
     actor CAAdmin as Intermediate CA Admin<br/>(Security Team)
     participant CA as Intermediate CA
 
-    Note over WebAdmin, Server: Preparation Phase
-    WebAdmin->>WebAdmin: Research OpenSSL config<br/>(Ensure SANs are correct)
-    WebAdmin->>Server: Generate Private Key
-    WebAdmin->>Server: Generate CSR (using config)
-    
-    Note over WebAdmin, Ticket: Request Phase
-    WebAdmin->>Ticket: Create Ticket
-    WebAdmin->>Ticket: Attach CSR File
-    Ticket-->>CAAdmin: Notify New Request
+    Note over WebAdmin, Server: Preparation Phase (30-60 mins)
+    WebAdmin->>WebAdmin: Research OpenSSL config<br/>(Ensure SANs are correct)<br/>[20-30 mins]
+    WebAdmin->>Server: Generate Private Key<br/>[5 mins]
+    WebAdmin->>Server: Generate CSR (using config)<br/>[10 mins]
 
-    Note over CAAdmin, CA: Verification & Signing Phase
-    CAAdmin->>Ticket: Review Request
-    CAAdmin->>CAAdmin: Verify Identity & SANs<br/>(Manual Check)
-    CAAdmin->>CA: Execute Signing Command<br/>(openssl ca ...)
-    CA-->>CAAdmin: Output Signed Certificate
-    
-    Note over CAAdmin, Ticket: Delivery Phase
-    CAAdmin->>CAAdmin: Bundle Cert + Intermediate + Root
-    CAAdmin->>Ticket: Attach Cert Chain
-    CAAdmin->>Ticket: Close Ticket
-    Ticket-->>WebAdmin: Notify Resolution
+    Note over WebAdmin, Ticket: Request Phase (10-15 mins)
+    WebAdmin->>Ticket: Create Ticket<br/>[5 mins]
+    WebAdmin->>Ticket: Attach CSR File<br/>[2 mins]
+    Ticket-->>CAAdmin: Notify New Request<br/>[Instant]
 
-    Note over WebAdmin, Server: Installation Phase
-    WebAdmin->>Ticket: Download Cert Chain
-    WebAdmin->>Server: Upload Certs (SCP/SFTP)
-    WebAdmin->>Server: Set Permissions (chmod 600)
-    WebAdmin->>Server: Update Web Server Config
-    WebAdmin->>Server: Restart Service
-    
-    Note over WebAdmin: Lifecycle Management
-    WebAdmin->>WebAdmin: Set Calendar Reminder<br/>(Renew in 1 year)
+    Note over CAAdmin, CA: ⏰ Wait Time: 1-3 Business Days<br/>(Queue + Security Team Availability)
+
+    Note over CAAdmin, CA: Verification & Signing Phase (20-40 mins)
+    CAAdmin->>Ticket: Review Request<br/>[5 mins]
+    CAAdmin->>CAAdmin: Verify Identity & SANs<br/>(Manual Check)<br/>[10-20 mins]
+    CAAdmin->>CA: Execute Signing Command<br/>(openssl ca ...)<br/>[5 mins]
+    CA-->>CAAdmin: Output Signed Certificate<br/>[Instant]
+
+    Note over CAAdmin, Ticket: Delivery Phase (10-15 mins)
+    CAAdmin->>CAAdmin: Bundle Cert + Intermediate + Root<br/>[5 mins]
+    CAAdmin->>Ticket: Attach Cert Chain<br/>[3 mins]
+    CAAdmin->>Ticket: Close Ticket<br/>[2 mins]
+    Ticket-->>WebAdmin: Notify Resolution<br/>[Instant]
+
+    Note over WebAdmin, Server: Installation Phase (20-30 mins)
+    WebAdmin->>Ticket: Download Cert Chain<br/>[2 mins]
+    WebAdmin->>Server: Upload Certs (SCP/SFTP)<br/>[5 mins]
+    WebAdmin->>Server: Set Permissions (chmod 600)<br/>[2 mins]
+    WebAdmin->>Server: Update Web Server Config<br/>[5-10 mins]
+    WebAdmin->>Server: Restart Service<br/>[3 mins]
+
+    Note over WebAdmin: Lifecycle Management (5 mins)
+    WebAdmin->>WebAdmin: Set Calendar Reminder<br/>(Renew in 1 year)<br/>[5 mins]
+
+    Note over WebAdmin, CA: 🕐 TOTAL TIME: 2-4 Business Days<br/>Active Work: ~1.5-2.5 Hours<br/>Human Touchpoints: 2 Teams, 15+ Steps
 ```
 
 # Vault Generation Description (Automated)
@@ -81,23 +85,25 @@ sequenceDiagram
     end
     participant Vault as Vault Server
 
-    Note over Agent, Vault: Initialization (One-time)
-    Agent->>Vault: Authenticate (AppRole/Cloud Identity)
-    Vault-->>Agent: Return Access Token
+    Note over Agent, Vault: Initialization (One-time Setup)<br/>[30-60 mins - Admin configures once]
+    Agent->>Vault: Authenticate (AppRole/Cloud Identity)<br/>[<1 sec]
+    Vault-->>Agent: Return Access Token<br/>[<1 sec]
 
-    Note over Agent, Vault: Automated Lifecycle Loop
+    Note over Agent, Vault: Automated Lifecycle Loop<br/>[ZERO Human Effort]
     loop Every TTL (e.g., 24h or 30s)
-        Agent->>Vault: Request Certificate (pki/issue/web-role)
-        Vault-->>Agent: Return Cert (w/ Pub Key) + Private Key + Chain
-        
-        Agent->>Files: Write app.crt, app.key, ca.crt
-        Agent->>Files: Set Permissions (0600)
-        
-        Agent->>Server: Execute "systemctl reload nginx"
-        Server->>Files: Read new Certs
-        
-        Note right of Agent: Agent sleeps until renewal window
+        Agent->>Vault: Request Certificate (pki/issue/web-role)<br/>[~100 ms]
+        Vault-->>Agent: Return Cert (w/ Pub Key) + Private Key + Chain<br/>[~100 ms]
+
+        Agent->>Files: Write app.crt, app.key, ca.crt<br/>[<50 ms]
+        Agent->>Files: Set Permissions (0600)<br/>[<10 ms]
+
+        Agent->>Server: Execute "systemctl reload nginx"<br/>[~1 sec]
+        Server->>Files: Read new Certs<br/>[<100 ms]
+
+        Note right of Agent: Agent sleeps until renewal window<br/>[Zero human involvement]
     end
+
+    Note over Agent, Vault: 🚀 TOTAL TIME PER RENEWAL: ~1-2 Seconds<br/>Human Effort: ZERO<br/>Fully Automated Forever
 ```
 
 # Comparison Summary
