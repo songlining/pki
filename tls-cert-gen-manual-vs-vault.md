@@ -61,7 +61,7 @@ sequenceDiagram
     Note over WebAdmin: Lifecycle Management (5 mins)
     WebAdmin->>WebAdmin: Set Calendar Reminder<br/>(Renew in 1 year)<br/>[5 mins]
 
-    Note over WebAdmin, CA: 🕐 TOTAL TIME: 2-4 Business Days<br/>Active Work: ~1.5-2.5 Hours<br/>Human Touchpoints: 2 Teams, 15+ Steps<br/>💰 LABOR COST: AUD$75-125 per certificate
+    Note over WebAdmin, CA: 🕐 TOTAL TIME: 2-4 Business Days<br/>Active Work: ~1.5-2.5 Hours<br/>Human Touchpoints: 2 Teams, 15+ Steps<br/>💰 LABOR COST: AUD150-250 per certificate in an ideal/error-free situation
 ```
 
 # Vault Generation Description (Automated)
