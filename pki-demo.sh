@@ -30,7 +30,7 @@ vault secrets disable pki_int 2>/dev/null || true
 vault secrets disable pki 2>/dev/null || true
 vault secrets enable pki 2>/dev/null || true
 vault secrets enable -path=pki_int pki 2>/dev/null || true
-vault secrets tune -max-lease-ttl=87600h pki 2>/dev/null || true  
+vault secrets tune -max-lease-ttl=87600h pki 2>/dev/null || true
 vault secrets tune -max-lease-ttl=43800h pki_int 2>/dev/null || true
 
 # Demo title
@@ -82,7 +82,15 @@ echo "╚═══════════════════════�
 echo -e "${COLOR_RESET}"
 echo "First, let's generate a root certificate for our PKI:"
 echo ""
-pe "vault write -field=certificate pki/root/generate/internal common_name=\"Demo Root CA\" country=\"AU\" organization=\"HashiCorp Demo\" ttl=87600h > root-ca.crt"
+p "vault write \\\\
+  -field=certificate \\\\
+  pki/root/generate/internal \\\\
+  common_name=\"Demo Root CA\" \\\\
+  country=\"AU\" \\\\
+  organization=\"HashiCorp Demo\" \\\\
+  ttl=87600h \\\\
+  > root-ca.crt"
+run_cmd "vault write -field=certificate pki/root/generate/internal common_name=\"Demo Root CA\" country=\"AU\" organization=\"HashiCorp Demo\" ttl=87600h > root-ca.crt"
 echo ""
 echo "✅ Root certificate generated and saved to root-ca.crt"
 pe "ls -la root-ca.crt"
@@ -96,7 +104,10 @@ echo "╚═══════════════════════�
 echo -e "${COLOR_RESET}"
 echo "Configure URLs for certificate and CRL distribution:"
 echo ""
-pe "vault write pki/config/urls issuing_certificates=\"http://localhost:8200/v1/pki/ca\" crl_distribution_points=\"http://localhost:8200/v1/pki/crl\""
+p "vault write pki/config/urls \\\\
+  issuing_certificates=\"http://localhost:8200/v1/pki/ca\" \\\\
+  crl_distribution_points=\"http://localhost:8200/v1/pki/crl\""
+run_cmd "vault write pki/config/urls issuing_certificates=\"http://localhost:8200/v1/pki/ca\" crl_distribution_points=\"http://localhost:8200/v1/pki/crl\""
 echo ""
 echo "✅ PKI URLs configured for certificate distribution"
 wait
@@ -110,15 +121,31 @@ echo -e "${COLOR_RESET}"
 echo "Now let's create an intermediate certificate authority:"
 echo ""
 echo "🔧 Generate intermediate CSR:"
-pe "vault write -field=csr pki_int/intermediate/generate/internal common_name=\"Demo Intermediate CA\" country=\"AU\" organization=\"HashiCorp Demo\" > intermediate.csr"
+p "vault write \\\\
+  -field=csr \\\\
+  pki_int/intermediate/generate/internal \\\\
+  common_name=\"Demo Intermediate CA\" \\\\
+  country=\"AU\" \\\\
+  organization=\"HashiCorp Demo\" \\\\
+  > intermediate.csr"
+run_cmd "vault write -field=csr pki_int/intermediate/generate/internal common_name=\"Demo Intermediate CA\" country=\"AU\" organization=\"HashiCorp Demo\" > intermediate.csr"
 
 echo ""
 echo "🔑 Sign intermediate CSR with root CA:"
-pe "vault write -field=certificate pki/root/sign-intermediate csr=@intermediate.csr format=pem_bundle ttl=43800h > intermediate.crt"
+p "vault write \\\\
+  -field=certificate \\\\
+  pki/root/sign-intermediate \\\\
+  csr=@intermediate.csr \\\\
+  format=pem_bundle \\\\
+  ttl=43800h \\\\
+  > intermediate.crt"
+run_cmd "vault write -field=certificate pki/root/sign-intermediate csr=@intermediate.csr format=pem_bundle ttl=43800h > intermediate.crt"
 
 echo ""
 echo "📋 Set signed certificate on intermediate CA:"
-pe "vault write pki_int/intermediate/set-signed certificate=@intermediate.crt"
+p "vault write pki_int/intermediate/set-signed \\\\
+  certificate=@intermediate.crt"
+run_cmd "vault write pki_int/intermediate/set-signed certificate=@intermediate.crt"
 
 echo ""
 echo "✅ Intermediate CA configured and ready for certificate issuance"
@@ -132,7 +159,10 @@ echo "╚═══════════════════════�
 echo -e "${COLOR_RESET}"
 echo "Configure URLs for the intermediate CA:"
 echo ""
-pe "vault write pki_int/config/urls issuing_certificates=\"http://localhost:8200/v1/pki_int/ca\" crl_distribution_points=\"http://localhost:8200/v1/pki_int/crl\""
+p "vault write pki_int/config/urls \\\\
+  issuing_certificates=\"http://localhost:8200/v1/pki_int/ca\" \\\\
+  crl_distribution_points=\"http://localhost:8200/v1/pki_int/crl\""
+run_cmd "vault write pki_int/config/urls issuing_certificates=\"http://localhost:8200/v1/pki_int/ca\" crl_distribution_points=\"http://localhost:8200/v1/pki_int/crl\""
 echo ""
 echo "✅ Intermediate CA URLs configured"
 wait
@@ -145,7 +175,15 @@ echo "╚═══════════════════════�
 echo -e "${COLOR_RESET}"
 echo "Create a role that defines what types of certificates can be issued:"
 echo ""
-pe "vault write pki_int/roles/web-server allowed_domains=\"example.com,demo.local\" allow_subdomains=true max_ttl=\"72h\" key_bits=2048 allow_any_name=false allow_localhost=true allow_ip_sans=true"
+p "vault write pki_int/roles/web-server \\\\
+  allowed_domains=\"example.com,demo.local\" \\\\
+  allow_subdomains=true \\\\
+  max_ttl=\"72h\" \\\\
+  key_bits=2048 \\\\
+  allow_any_name=false \\\\
+  allow_localhost=true \\\\
+  allow_ip_sans=true"
+run_cmd "vault write pki_int/roles/web-server allowed_domains=\"example.com,demo.local\" allow_subdomains=true max_ttl=\"72h\" key_bits=2048 allow_any_name=false allow_localhost=true allow_ip_sans=true"
 echo ""
 echo "✅ Certificate role 'web-server' created with domain restrictions"
 wait
@@ -158,7 +196,14 @@ echo "╚═══════════════════════�
 echo -e "${COLOR_RESET}"
 echo "Now let's issue a certificate for a web server:"
 echo ""
-pe "vault write pki_int/issue/web-server common_name=\"web.example.com\" alt_names=\"api.example.com,www.example.com\" ip_sans=\"127.0.0.1,192.168.1.100\" ttl=\"24h\" format=pem_bundle"
+p "vault write \\\\
+  pki_int/issue/web-server \\\\
+  common_name=\"web.example.com\" \\\\
+  alt_names=\"api.example.com,www.example.com\" \\\\
+  ip_sans=\"127.0.0.1,192.168.1.100\" \\\\
+  ttl=\"24h\" \\\\
+  format=pem_bundle"
+run_cmd "vault write pki_int/issue/web-server common_name=\"web.example.com\" alt_names=\"api.example.com,www.example.com\" ip_sans=\"127.0.0.1,192.168.1.100\" ttl=\"24h\" format=pem_bundle"
 echo ""
 echo "🎉 Certificate successfully issued!"
 echo ""
@@ -183,7 +228,14 @@ pe "cat cert_metadata.txt"
 
 echo ""
 echo "📝 Now issue a certificate with metadata:"
-pe "vault write -field=serial_number pki_int/issue/web-server common_name=\"metadata.example.com\" ttl=\"24h\" cert_metadata=\$(cat cert_metadata.txt) > cert_serial.txt"
+p "vault write \\\\
+  -field=serial_number \\\\
+  pki_int/issue/web-server \\\\
+  common_name=\"metadata.example.com\" \\\\
+  ttl=\"24h\" \\\\
+  cert_metadata=\$(cat cert_metadata.txt) \\\\
+  > cert_serial.txt"
+run_cmd "vault write -field=serial_number pki_int/issue/web-server common_name=\"metadata.example.com\" ttl=\"24h\" cert_metadata=\$(cat cert_metadata.txt) > cert_serial.txt"
 pe "cat cert_serial.txt"
 
 echo ""
@@ -198,11 +250,29 @@ echo "╚═══════════════════════�
 echo -e "${COLOR_RESET}"
 echo "Let's save the certificate components to separate files for easier use:"
 echo ""
-pe "vault write -field=certificate pki_int/issue/web-server common_name=\"app.example.com\" ttl=\"24h\" > app-cert.pem"
+p "vault write \\\\
+  -field=certificate \\\\
+  pki_int/issue/web-server \\\\
+  common_name=\"app.example.com\" \\\\
+  ttl=\"24h\" \\\\
+  > app-cert.pem"
+run_cmd "vault write -field=certificate pki_int/issue/web-server common_name=\"app.example.com\" ttl=\"24h\" > app-cert.pem"
 
-pe "vault write -field=private_key pki_int/issue/web-server common_name=\"api.example.com\" ttl=\"24h\" > api-key.pem"
+p "vault write \\\\
+  -field=private_key \\\\
+  pki_int/issue/web-server \\\\
+  common_name=\"api.example.com\" \\\\
+  ttl=\"24h\" \\\\
+  > api-key.pem"
+run_cmd "vault write -field=private_key pki_int/issue/web-server common_name=\"api.example.com\" ttl=\"24h\" > api-key.pem"
 
-pe "vault write -field=ca_chain pki_int/issue/web-server common_name=\"backend.example.com\" ttl=\"24h\" > ca-chain.pem"
+p "vault write \\\\
+  -field=ca_chain \\\\
+  pki_int/issue/web-server \\\\
+  common_name=\"backend.example.com\" \\\\
+  ttl=\"24h\" \\\\
+  > ca-chain.pem"
+run_cmd "vault write -field=ca_chain pki_int/issue/web-server common_name=\"backend.example.com\" ttl=\"24h\" > ca-chain.pem"
 
 echo ""
 echo "✅ Certificate files saved:"
@@ -221,10 +291,16 @@ echo "📋 List all certificates with metadata:"
 pe "vault list pki_int/cert-metadata/"
 echo ""
 echo "🔍 Read metadata for our certificate:"
-pe "vault read pki_int/cert-metadata/\$(cat cert_serial.txt)"
+p "vault read \\\\
+  pki_int/cert-metadata/\$(cat cert_serial.txt)"
+run_cmd "vault read pki_int/cert-metadata/\$(cat cert_serial.txt)"
 echo ""
 echo "🎯 Decode the metadata to see the original JSON:"
-pe "vault read -field=cert_metadata pki_int/cert-metadata/\$(cat cert_serial.txt) | base64 -d"
+p "vault read \\\\
+  -field=cert_metadata \\\\
+  pki_int/cert-metadata/\$(cat cert_serial.txt) \\\\
+  | base64 -d"
+run_cmd "vault read -field=cert_metadata pki_int/cert-metadata/\$(cat cert_serial.txt) | base64 -d"
 echo ""
 echo "✅ Certificate metadata successfully retrieved and decoded!"
 wait
@@ -237,7 +313,11 @@ echo "╚═══════════════════════�
 echo -e "${COLOR_RESET}"
 echo "Let's examine the certificate we just issued:"
 echo ""
-pe "openssl x509 -in app-cert.pem -text -noout | head -20"
+p "openssl x509 \\\\
+  -in app-cert.pem \\\\
+  -text -noout \\\\
+  | head -20"
+run_cmd "openssl x509 -in app-cert.pem -text -noout | head -20"
 echo ""
 echo "🔍 Key certificate details:"
 echo "  • Subject: Contains the common name we specified"
@@ -255,7 +335,11 @@ echo -e "${COLOR_RESET}"
 echo "Let's verify our certificate chain is properly constructed:"
 echo ""
 echo "🔗 Certificate chain verification:"
-pe "openssl verify -CAfile root-ca.crt -untrusted intermediate.crt app-cert.pem"
+p "openssl verify \\\\
+  -CAfile root-ca.crt \\\\
+  -untrusted intermediate.crt \\\\
+  app-cert.pem"
+run_cmd "openssl verify -CAfile root-ca.crt -untrusted intermediate.crt app-cert.pem"
 echo ""
 echo "✅ Certificate chain is valid and properly signed!"
 wait
@@ -269,7 +353,13 @@ echo -e "${COLOR_RESET}"
 echo "Demonstrate certificate revocation capabilities:"
 echo ""
 echo "🎫 First, let's issue a certificate specifically for revocation:"
-pe "vault write -field=serial_number pki_int/issue/web-server common_name=\"revoke-me.example.com\" ttl=\"1h\" > serial.txt"
+p "vault write \\\\
+  -field=serial_number \\\\
+  pki_int/issue/web-server \\\\
+  common_name=\"revoke-me.example.com\" \\\\
+  ttl=\"1h\" \\\\
+  > serial.txt"
+run_cmd "vault write -field=serial_number pki_int/issue/web-server common_name=\"revoke-me.example.com\" ttl=\"1h\" > serial.txt"
 
 echo ""
 echo "📋 Certificate serial number:"
@@ -277,7 +367,9 @@ pe "cat serial.txt"
 
 echo ""
 echo "🚫 Revoke the certificate:"
-pe "vault write pki_int/revoke serial_number=\$(cat serial.txt)"
+p "vault write pki_int/revoke \\\\
+  serial_number=\$(cat serial.txt)"
+run_cmd "vault write pki_int/revoke serial_number=\$(cat serial.txt)"
 
 echo ""
 echo "✅ Certificate successfully revoked and added to CRL"
@@ -291,7 +383,9 @@ echo "╚═══════════════════════�
 echo -e "${COLOR_RESET}"
 echo "View the Certificate Revocation List:"
 echo ""
-pe "curl -s \$VAULT_ADDR/v1/pki_int/crl/pem | openssl crl -inform PEM -text -noout"
+p "curl -s \$VAULT_ADDR/v1/pki_int/crl/pem \\\\
+  | openssl crl -inform PEM -text -noout"
+run_cmd "curl -s \$VAULT_ADDR/v1/pki_int/crl/pem | openssl crl -inform PEM -text -noout"
 echo ""
 echo "📋 The CRL shows our revoked certificate serial number"
 wait
