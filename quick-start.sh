@@ -30,7 +30,7 @@ version: '3.8'
 
 services:
   vault:
-    image: hashicorp/vault-enterprise
+    image: hashicorp/vault-enterprise:1.21.4-ent
     container_name: vault-enterprise
     environment:
       VAULT_DEV_ROOT_TOKEN_ID: "myroot"

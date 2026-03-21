@@ -13,9 +13,17 @@ fi
 # Source demo-magic
 . ./demo-magic.sh
 
+# Add breathing room around rendered demo commands without changing shared demo-magic behavior.
+eval "$(declare -f p | sed '1s/^p[[:space:]]*()/demo_magic_p()/')"
+p() {
+  printf '\n'
+  demo_magic_p "$@"
+  printf '\n'
+}
+
 # Set demo speed
 TYPE_SPEED=200
-DEMO_PROMPT="${GREEN}$ ${CYAN}\W ${COLOR_RESET}"
+DEMO_PROMPT=""
 
 # Vault configuration
 export VAULT_ADDR="http://localhost:8200"
@@ -129,17 +137,7 @@ p "vault write \\\\
   > intermediate.crt"
 run_cmd "vault write -field=certificate pki/root/sign-intermediate csr=@intermediate.csr format=pem_bundle ttl=43800h > intermediate.crt"
 
-echo ""
-echo "Set signed certificate on intermediate CA:"
-p "vault write pki_int/intermediate/set-signed \\\\
-  certificate=@intermediate.crt"
-run_cmd "vault write pki_int/intermediate/set-signed certificate=@intermediate.crt"
-
-echo ""
-echo "Intermediate CA configured and ready for certificate issuance"
-wait
-
-# Configure intermediate CA URLs
+# Configure intermediate CA URLs before importing the signed issuer to avoid the AIA warning.
 echo -e "${BLUE}"
 echo "==== Step 6: Configure Intermediate CA URLs ===="
 echo -e "${COLOR_RESET}"
@@ -151,6 +149,16 @@ p "vault write pki_int/config/urls \\\\
 run_cmd "vault write pki_int/config/urls issuing_certificates=\"http://localhost:8200/v1/pki_int/ca\" crl_distribution_points=\"http://localhost:8200/v1/pki_int/crl\""
 echo ""
 echo "Intermediate CA URLs configured"
+wait
+
+echo ""
+echo "Set signed certificate on intermediate CA:"
+p "vault write pki_int/intermediate/set-signed \\\\
+  certificate=@intermediate.crt"
+run_cmd "vault write pki_int/intermediate/set-signed certificate=@intermediate.crt"
+
+echo ""
+echo "Intermediate CA configured and ready for certificate issuance"
 wait
 
 # Create a role for certificate issuance
@@ -203,7 +211,7 @@ echo -e "${COLOR_RESET}"
 echo "HashiCorp Vault supports adding custom metadata to certificates:"
 echo ""
 echo "First, let's create metadata for our certificate:"
-pe "echo '{\"department\": \"Engineering\", \"owner\": \"DevOps Team\", \"application\": \"Web Server\", \"environment\": \"Production\", \"cost_center\": \"CC-1001\"}' | base64 > cert_metadata.txt"
+pe "printf \"%s\n\" \"{\\\"department\\\": \\\"Engineering\\\", \\\"owner\\\": \\\"DevOps Team\\\", \\\"application\\\": \\\"Web Server\\\", \\\"environment\\\": \\\"Production\\\", \\\"cost_center\\\": \\\"CC-1001\\\"}\" | base64 > cert_metadata.txt"
 pe "cat cert_metadata.txt"
 
 echo ""
@@ -241,8 +249,8 @@ p "vault write \\\\
   pki_int/issue/web-server \\\\
   common_name=\"api.example.com\" \\\\
   ttl=\"24h\" \\\\
-  > api-key.pem"
-run_cmd "vault write -field=private_key pki_int/issue/web-server common_name=\"api.example.com\" ttl=\"24h\" > api-key.pem"
+  > api-private-key.pem"
+run_cmd "vault write -field=private_key pki_int/issue/web-server common_name=\"api.example.com\" ttl=\"24h\" > api-private-key.pem"
 
 p "vault write \\\\
   -field=ca_chain \\\\
@@ -289,9 +297,8 @@ echo "Let's examine the certificate we just issued:"
 echo ""
 p "openssl x509 \\\\
   -in app-cert.pem \\\\
-  -text -noout \\\\
-  | head -20"
-run_cmd "openssl x509 -in app-cert.pem -text -noout | head -20"
+  -text -noout"
+run_cmd "openssl x509 -in app-cert.pem -text -noout"
 echo ""
 echo "Key certificate details:"
 echo "  - Subject: Contains the common name we specified"
@@ -351,9 +358,11 @@ echo "==== Step 14: Certificate Revocation List ===="
 echo -e "${COLOR_RESET}"
 echo "View the Certificate Revocation List:"
 echo ""
-p "curl -s \$VAULT_ADDR/v1/pki_int/crl/pem \\\\
+p "vault read \\\\
+  -field=certificate \\\\
+  pki_int/cert/crl \\\\
   | openssl crl -inform PEM -text -noout"
-run_cmd "curl -s \$VAULT_ADDR/v1/pki_int/crl/pem | openssl crl -inform PEM -text -noout"
+run_cmd "vault read -field=certificate pki_int/cert/crl | openssl crl -inform PEM -text -noout"
 echo ""
 echo "The CRL shows our revoked certificate serial number"
 wait
@@ -363,7 +372,7 @@ echo -e "${BLUE}"
 echo "==== Demo Summary ===="
 echo -e "${COLOR_RESET}"
 echo ""
-echo "${GREEN}PKI Demo Completed Successfully!${COLOR_RESET}"
+printf '%b\n' "${GREEN}PKI Demo Completed Successfully!${COLOR_RESET}"
 echo ""
 echo "What we accomplished:"
 echo "  - Configured Vault Enterprise PKI engines"
@@ -377,13 +386,20 @@ echo "  - Verified certificate chain integrity"
 echo "  - Demonstrated certificate revocation"
 echo ""
 echo "Generated files:"
-pe "ls -la *.pem *.crt *.csr *.txt 2>/dev/null || echo 'No files generated in final demo run'"
+shopt -s nullglob
+generated_files=( *.pem *.crt *.csr *.txt )
+if (( ${#generated_files[@]} )); then
+  ls -la *.pem *.crt *.csr *.txt 2>/dev/null
+else
+  echo "No files generated in final demo run"
+fi
+shopt -u nullglob
 echo ""
-echo "${YELLOW}Next Steps:${COLOR_RESET}"
+printf '%b\n' "${YELLOW}Next Steps:${COLOR_RESET}"
 echo "  - Use certificates in your applications"
 echo "  - Set up automatic certificate renewal"
 echo "  - Configure certificate templates for different use cases"
 echo "  - Integrate with CI/CD pipelines for automated certificate management"
 echo ""
-echo "${GREEN}Thank you for watching the HashiCorp Vault PKI Demo!${COLOR_RESET}"
+printf '%b\n' "${GREEN}Thank you for watching the HashiCorp Vault PKI Demo!${COLOR_RESET}"
 echo ""
