@@ -183,8 +183,8 @@ main() {
     print_important "Watch for:"
     echo -e "${YELLOW}   - Certificate serial number changes${NC}"
     echo -e "${YELLOW}   - Process restarts (PID changes)${NC}"
-    echo -e "${YELLOW}   - Iteration counter resets${NC}"
-    echo -e "${YELLOW}   - Environment variable reloads${NC}"
+    echo -e "${YELLOW}   - Iteration counter resets / heartbeat lines${NC}"
+    echo -e "${YELLOW}   - Reload and shutdown events during rotation${NC}"
     
     echo -e "\n${PURPLE}Starting live log monitoring... (Press Ctrl+C to stop)${NC}\n"
     
@@ -195,7 +195,17 @@ main() {
             s/\0//g;
             s/\e\[[0-9;]*[A-Za-z]//g;
             s/[^\x09\x0A\x0D\x20-\x7E]//g;
-            print if /(INFO:|CERT:|Application running|Current certificate serial|PID:|MyApp starting)/;
+            print if /MyApp starting up \(PID:/ ||
+                     /Current certificate serial:/ ||
+                     /Application running\.\.\. \(iteration / ||
+                     /Checking certificate status/ ||
+                     /Received SIGTERM - initiating graceful shutdown/ ||
+                     /Received SIGHUP - reloading configuration/ ||
+                     /Loaded environment from \/vault\/agent\/app\.env/ ||
+                     /Reloaded environment from \/vault\/agent\/app\.env/ ||
+                     /MyApp shutting down gracefully/ ||
+                     /MyApp stopped cleanly/ ||
+                     /automatically restarted every ~30s when certificates rotate/;
         ' &
     LOG_PID=$!
     
