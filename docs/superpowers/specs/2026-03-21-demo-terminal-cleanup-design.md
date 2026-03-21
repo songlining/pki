@@ -27,6 +27,7 @@ This keeps the scope focused on presentation while avoiding unnecessary churn in
 
 The cleanup applies to demo-visible scripts and helper output that appears during demo runs:
 
+- `Makefile`
 - `pki-demo.sh`
 - `agent-pki-demo.sh`
 - `demo-process-supervisor.sh`
@@ -54,6 +55,7 @@ The cleanup applies to demo-visible scripts and helper output that appears durin
 ### Runtime output compatibility
 
 - Keep ANSI colors where they already exist.
+- Normalize top-level `make` entrypoint messages when they are part of the demo path.
 - Update any grep or log-filter expressions that currently depend on the old stylized output so the process-supervisor demo still surfaces the right events.
 
 ## Validation
@@ -61,7 +63,7 @@ The cleanup applies to demo-visible scripts and helper output that appears durin
 - Run `bash -n` on each edited shell script.
 - Run a targeted non-ASCII scan across the files in scope.
 - Spot-check diffs to confirm the change is presentation-only.
-- If needed after the edit, manually run `make demo` or `make agent-demo` to confirm the updated formatting still reads well.
+- Manually run `make demo`, `make agent-demo`, and `make process-demo` as needed to confirm the wrapper output also stays ASCII and reads well.
 
 ## Risks and Mitigations
 
@@ -74,4 +76,5 @@ The cleanup applies to demo-visible scripts and helper output that appears durin
 
 - Demo-visible output in scope is fully ASCII.
 - The demo prompt uses `$`.
+- The `make` entrypoints used to launch demos do not reintroduce non-ASCII styling.
 - Demo flow and behavior remain unchanged apart from presentation cleanup.
