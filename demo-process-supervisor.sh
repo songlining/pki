@@ -144,7 +144,6 @@ filter_live_monitor_output() {
         print $visible if $match =~ /MyApp starting up \(PID:/ ||
                            $match =~ /Environment CERT_SERIAL:/ ||
                            $match =~ /Current certificate serial:/ ||
-                           $match =~ /Application running\.\.\. \(iteration / ||
                            $match =~ /Checking certificate status/ ||
                            $match =~ /Received SIGTERM - initiating graceful shutdown/ ||
                            $match =~ /Received SIGHUP - reloading configuration/ ||
@@ -233,7 +232,7 @@ main() {
     print_important "Watch for:"
     echo -e "${YELLOW}   - Certificate serial number changes${NC}"
     echo -e "${YELLOW}   - Process restarts (PID changes)${NC}"
-    echo -e "${YELLOW}   - Iteration counter resets / heartbeat lines${NC}"
+    echo -e "${YELLOW}   - Startup serial values after each restart${NC}"
     echo -e "${YELLOW}   - Reload and shutdown events during rotation${NC}"
     
     show_current_startup_context
