@@ -5,7 +5,7 @@
 
 # Function to ensure agent credentials are configured and valid
 ensure_agent_credentials() {
-    echo "🔧 Ensuring Vault Agent credentials are properly configured..."
+    echo "Ensuring Vault Agent credentials are properly configured..."
     
     # Check if credentials exist
     if [ ! -f "vault-agent-config/role-id" ] || [ ! -f "vault-agent-config/secret-id" ]; then
@@ -21,7 +21,7 @@ ensure_agent_credentials() {
         return
     fi
     
-    echo "   ✅ Credential files exist"
+    echo "   Credential files exist"}
     
     # Validate credentials work by testing authentication
     ROLE_ID=$(cat vault-agent-config/role-id)
@@ -33,10 +33,10 @@ ensure_agent_credentials() {
     
     # Test if credentials can authenticate
     if ! vault write -field=token auth/approle/login role_id="$ROLE_ID" secret_id="$SECRET_ID" >/dev/null 2>&1; then
-        echo "   ⚠️  Credentials invalid, regenerating..."
+        echo "   Credentials invalid, regenerating..."}
         ./setup-agent-credentials.sh
     else
-        echo "   ✅ Credentials validated successfully"
+        echo "   Credentials validated successfully"}
     fi
     
     echo ""

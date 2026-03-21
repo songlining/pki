@@ -44,7 +44,7 @@ echo -n "$SECRET_ID" > vault-agent-config/secret-id
 echo "7. Setting proper permissions..."
 chmod 600 vault-agent-config/role-id vault-agent-config/secret-id
 
-echo "✅ Vault Agent credentials configured successfully!"
+echo "Vault Agent credentials configured successfully!"
 echo "Files created:"
 ls -la vault-agent-config/role-id vault-agent-config/secret-id
 
