@@ -9,17 +9,17 @@ RUNNING=true
 
 # Function to log messages with timestamp and color
 log() {
-    echo -e "\033[1;32m[$(date '+%Y-%m-%d %H:%M:%S')]\033[0m $*"
+    echo -e "\033[1;32m[$(date '+%Y-%m-%d %H:%M:%S')]\033[0m INFO: $*"
 }
 
 # Function to log important events in cyan
 log_important() {
-    echo -e "\033[1;36m[$(date '+%Y-%m-%d %H:%M:%S')] 🔄 $*\033[0m"
+    echo -e "\033[1;36m[$(date '+%Y-%m-%d %H:%M:%S')] INFO: $*\033[0m"
 }
 
 # Function to log certificate details in yellow
 log_cert() {
-    echo -e "\033[1;33m[$(date '+%Y-%m-%d %H:%M:%S')] 📜 $*\033[0m"
+    echo -e "\033[1;33m[$(date '+%Y-%m-%d %H:%M:%S')] CERT: $*\033[0m"
 }
 
 # Function to display environment variables and certificate details
@@ -68,7 +68,7 @@ show_config() {
                         if [ $TTL_REMAINING -gt 0 ]; then
                             log_cert "  TTL Remaining: ${TTL_REMAINING} seconds"
                         else
-                            log_cert "  ⚠️ Certificate EXPIRED!"
+                            log_cert "  WARNING: Certificate EXPIRED!"
                         fi
                     fi
                 fi
@@ -76,7 +76,7 @@ show_config() {
                 log "  Unable to parse certificate details"
             fi
         else
-            log "  ❌ Certificate file not found!"
+            log "  ERROR: Certificate file not found!"
         fi
     else
         log "CERT_FILE: (not set)"
@@ -94,7 +94,7 @@ show_config() {
                 log "  Key Type: $KEY_INFO"
             fi
         else
-            log "  ❌ Private key file not found!"
+            log "  ERROR: Private key file not found!"
         fi
     else
         log "PRIVATE_KEY_FILE: (not set)"
@@ -104,13 +104,13 @@ show_config() {
 
 # Signal handler for SIGTERM (graceful shutdown)
 handle_sigterm() {
-    log_important "🛑 Received SIGTERM - initiating graceful shutdown..."
+    log_important "Received SIGTERM - initiating graceful shutdown..."
     RUNNING=false
 }
 
 # Signal handler for SIGHUP (configuration reload)
 handle_sighup() {
-    log_important "🔄 Received SIGHUP - reloading configuration..."
+    log_important "Received SIGHUP - reloading configuration..."
     
     # Reload environment variables if available
     if [ -f "/vault/agent/app.env" ]; then
@@ -132,13 +132,13 @@ if [ -f "/vault/agent/app.env" ]; then
 fi
 
 # Application startup
-log_important "🚀 MyApp starting up (PID: $$)"
-log_important "📧 Send SIGTERM to shutdown gracefully: kill -TERM $$"
-log_important "🔄 Send SIGHUP to reload configuration: kill -HUP $$"
+log_important "MyApp starting up (PID: $$)"
+log_important "Send SIGTERM to shutdown gracefully: kill -TERM $$"
+log_important "Send SIGHUP to reload configuration: kill -HUP $$"
 echo ""
-log_important "🎯 VAULT AGENT PROCESS SUPERVISOR DEMO"
-log_important "📋 This application will be automatically restarted every ~30s when certificates rotate"
-log_important "🔑 Watch for certificate serial number changes indicating rotation!"
+log_important "VAULT AGENT PROCESS SUPERVISOR DEMO"
+log_important "This application will be automatically restarted every ~30s when certificates rotate"
+log_important "Watch for certificate serial number changes indicating rotation!"
 echo ""
 
 # Show initial configuration
@@ -152,7 +152,7 @@ while [ "$RUNNING" = true ]; do
     # Simulate application work with certificate monitoring
     if [ $((COUNTER % 6)) -eq 1 ] && [ $COUNTER -gt 1 ]; then
         # Every 30 seconds (6 iterations * 5 seconds), show certificate status
-        log_important "🔍 Checking certificate status..."
+        log_important "Checking certificate status..."
         if [ -n "$CERT_FILE" ] && [ -f "$CERT_FILE" ]; then
             CURRENT_SERIAL=$(openssl x509 -in "$CERT_FILE" -noout -serial 2>/dev/null | cut -d= -f2)
             if [ -n "$CURRENT_SERIAL" ]; then
@@ -162,15 +162,15 @@ while [ "$RUNNING" = true ]; do
     fi
     
     # Regular application work
-    log "🔧 Application running... (iteration $COUNTER)"
+    log "Application running... (iteration $COUNTER)"
     
     # Sleep for a short time but allow signal interruption
     sleep 5 || break
 done
 
 # Cleanup and shutdown
-log_important "🛑 MyApp shutting down gracefully..."
-log_important "📊 Final iteration count: $COUNTER"
-log_important "✅ MyApp stopped cleanly"
+log_important "MyApp shutting down gracefully..."
+log_important "Final iteration count: $COUNTER"
+log_important "MyApp stopped cleanly"
 
 exit 0

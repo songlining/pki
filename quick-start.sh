@@ -70,7 +70,7 @@ timeout=30
 counter=0
 while ! curl -s http://localhost:8200/v1/sys/health >/dev/null 2>&1; do
     if [ $counter -ge $timeout ]; then
-        echo -e "${RED}ERROR: Timeout${NC}"
+        echo -e "${RED}Timeout${NC}"
         exit 1
     fi
     echo "Waiting... ($((counter + 1))/$timeout)"
@@ -78,7 +78,7 @@ while ! curl -s http://localhost:8200/v1/sys/health >/dev/null 2>&1; do
     counter=$((counter + 1))
 done
 
-echo -e "${GREEN}Vault is running.${NC}"
+echo -e "${GREEN}Vault is running!${NC}"
 
 # Set environment
 export VAULT_ADDR=http://localhost:8200
@@ -90,7 +90,7 @@ VAULT_VERSION=$(vault version | head -1)
 echo -e "${BLUE}${VAULT_VERSION}${NC}"
 
 if echo "$VAULT_VERSION" | grep -q "enterprise"; then
-    echo -e "${YELLOW}Vault Enterprise is running in dev mode.${NC}"
+    echo -e "${YELLOW}Vault Enterprise is running in dev mode!${NC}"
     echo -e "${BLUE}For full Enterprise features, you can:${NC}"
     echo -e "   1. Get a free trial license: ${GREEN}https://www.hashicorp.com/products/vault/trial${NC}"
     echo -e "   2. Save it as 'vault.hclic'"
@@ -101,17 +101,17 @@ if echo "$VAULT_VERSION" | grep -q "enterprise"; then
     vault secrets enable pki || echo "PKI already enabled"
     vault secrets tune -max-lease-ttl=8760h pki || true
     
-    echo -e "${GREEN}Quick start complete.${NC}"
+    echo -e "${GREEN}Quick start complete!${NC}"
     echo -e "${BLUE}Vault URL: ${GREEN}http://localhost:8200${NC}"
     echo -e "${BLUE}Root Token: ${GREEN}myroot${NC}"
     echo ""
     echo -e "${YELLOW}Vault Enterprise is running in development mode${NC}"
     echo -e "${YELLOW}   Some Enterprise features may require a license${NC}"
 else
-    echo -e "${YELLOW}WARNING: This appears to be Vault OSS${NC}"
+    echo -e "${YELLOW}This appears to be Vault OSS${NC}"
 fi
 
 # Clean up temp file
 rm -f docker-compose-temp.yml
 
-echo -e "${GREEN}Setup complete.${NC}"
+echo -e "${GREEN}Setup complete!${NC}"

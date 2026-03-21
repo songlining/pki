@@ -12,26 +12,26 @@ ensure_agent_credentials
 
 # Function to show certificate and key details
 show_cert_info() {
-    echo "🕐 $(date '+%H:%M:%S') - Certificate & Key Status:"
+    echo "TIME: $(date '+%H:%M:%S') - Certificate & Key Status:"
     if [ -f "vault-agent-output/app.crt" ]; then
         CERT_INFO=$(openssl x509 -in vault-agent-output/app.crt -noout -subject -dates 2>/dev/null)
         CERT_SERIAL=$(openssl x509 -in vault-agent-output/app.crt -noout -serial 2>/dev/null)
         CERT_TIME=$(stat -f %m vault-agent-output/app.crt)
         KEY_TIME=$(stat -f %m vault-agent-output/app.key)
         
-        echo "   📜 Certificate:"
+        echo "   CERT: Certificate:"
         echo "      $CERT_INFO"
         echo "      $CERT_SERIAL"
         echo "      Modified: $(date -r $CERT_TIME '+%H:%M:%S')"
         
-        echo "   🔐 Private Key:"
+        echo "   KEY: Private Key:"
         echo "      Modified: $(date -r $KEY_TIME '+%H:%M:%S')"
         echo "      Size: $(stat -f %z vault-agent-output/app.key) bytes"
         
         if [ "$CERT_TIME" -eq "$KEY_TIME" ]; then
-            echo "   ✅ Certificate and key rotated together"
+            echo "   OK: Certificate and key rotated together"
         else
-            echo "   ⚠️  Certificate and key have different timestamps"
+            echo "   WARNING: Certificate and key have different timestamps"
         fi
         echo
     else
@@ -43,7 +43,7 @@ show_cert_info() {
 echo "Initial certificate and private key:"
 show_cert_info
 
-echo "⏱️  Watching for certificate & private key rotation (press Ctrl+C to stop)..."
+echo "Watching for certificate & private key rotation (press Ctrl+C to stop)..."
 echo "   Both certificate AND private key rotate together when close to expiry (30 second TTL)"
 echo
 
@@ -56,7 +56,7 @@ while true; do
         CURRENT_SERIAL=$(openssl x509 -in vault-agent-output/app.crt -noout -serial 2>/dev/null | cut -d= -f2)
         
         if [ "$CURRENT_SERIAL" != "$LAST_SERIAL" ]; then
-            echo "🔄 ROTATION DETECTED! (Check #$COUNTER)"
+            echo "ROTATION DETECTED! (Check #$COUNTER)"
             show_cert_info
             LAST_SERIAL="$CURRENT_SERIAL"
             ((COUNTER++))

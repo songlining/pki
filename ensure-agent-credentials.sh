@@ -21,7 +21,7 @@ ensure_agent_credentials() {
         return
     fi
     
-    echo "   OK: Credential files exist"
+    echo "   Credential files exist"
     
     # Validate credentials work by testing authentication
     ROLE_ID=$(cat vault-agent-config/role-id)
@@ -33,10 +33,10 @@ ensure_agent_credentials() {
     
     # Test if credentials can authenticate
     if ! vault write -field=token auth/approle/login role_id="$ROLE_ID" secret_id="$SECRET_ID" >/dev/null 2>&1; then
-        echo "   WARNING: Credentials invalid, regenerating..."
+        echo "   Credentials invalid, regenerating..."
         ./setup-agent-credentials.sh
     else
-        echo "   OK: Credentials validated successfully"
+        echo "   Credentials validated successfully"
     fi
     
     echo ""
