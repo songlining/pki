@@ -78,7 +78,7 @@ while ! curl -s http://localhost:8200/v1/sys/health >/dev/null 2>&1; do
     counter=$((counter + 1))
 done
 
-echo -e "${GREEN}Vault is running!${NC}"}
+echo -e "${GREEN}Vault is running!${NC}"
 
 # Set environment
 export VAULT_ADDR=http://localhost:8200
@@ -91,21 +91,21 @@ echo -e "${BLUE}${VAULT_VERSION}${NC}"
 
 if echo "$VAULT_VERSION" | grep -q "enterprise"; then
     echo -e "${YELLOW}Vault Enterprise is running in dev mode!${NC}"
-    echo -e "${BLUE}For full Enterprise features, you can:${NC}"}
+    echo -e "${BLUE}For full Enterprise features, you can:${NC}"
     echo -e "   1. Get a free trial license: ${GREEN}https://www.hashicorp.com/products/vault/trial${NC}"
     echo -e "   2. Save it as 'vault.hclic'"
     echo -e "   3. Apply it with: ${GREEN}vault write sys/license text=@vault.hclic${NC}"
     
     # Run basic initialization
-    echo -e "${YELLOW}Setting up PKI...${NC}"}
+    echo -e "${YELLOW}Setting up PKI...${NC}"
     vault secrets enable pki || echo "PKI already enabled"
     vault secrets tune -max-lease-ttl=8760h pki || true
     
-    echo -e "${GREEN}Quick start complete!${NC}"}
+    echo -e "${GREEN}Quick start complete!${NC}"
     echo -e "${BLUE}Vault URL: ${GREEN}http://localhost:8200${NC}"
     echo -e "${BLUE}Root Token: ${GREEN}myroot${NC}"
     echo ""
-    echo -e "${YELLOW}Vault Enterprise is running in development mode${NC}"}
+    echo -e "${YELLOW}Vault Enterprise is running in development mode${NC}"
     echo -e "${YELLOW}   Some Enterprise features may require a license${NC}"
 else
     echo -e "${YELLOW}This appears to be Vault OSS${NC}"
