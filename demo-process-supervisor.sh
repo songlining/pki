@@ -188,8 +188,9 @@ main() {
     
     echo -e "\n${PURPLE}Starting live log monitoring... (Press Ctrl+C to stop)${NC}\n"
     
-    # Follow logs in real-time
-    docker logs vault-agent -f | grep -E --line-buffered "(INFO:|CERT:|Application running|Current certificate serial|PID:|MyApp starting)" &
+    # Follow the app log written by restart-app.sh inside the container.
+    docker exec vault-agent sh -c 'touch /tmp/myapp.log && tail -n 0 -F /tmp/myapp.log' | \
+        grep -E --line-buffered "(INFO:|CERT:|Application running|Current certificate serial|PID:|MyApp starting)" &
     LOG_PID=$!
     
     # Wait for user to stop
