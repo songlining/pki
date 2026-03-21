@@ -131,6 +131,56 @@ show_agent_logs() {
     docker logs vault-agent --tail 10 | grep -E "(rendered|executing|spawning|starting|Application running)" | tail -5
 }
 
+filter_live_monitor_output() {
+    perl -ne '
+        BEGIN { $| = 1 }
+        $visible = $_;
+        $visible =~ s/\0//g;
+        $visible =~ s/[^\x09\x0A\x0D\x1B\x20-\x7E]//g;
+
+        $match = $visible;
+        $match =~ s/\e\[[0-9;?]*[ -\/]*[@-~]//g;
+
+        print $visible if $match =~ /MyApp starting up \(PID:/ ||
+                           $match =~ /Environment CERT_SERIAL:/ ||
+                           $match =~ /Current certificate serial:/ ||
+                           $match =~ /Application running\.\.\. \(iteration / ||
+                           $match =~ /Checking certificate status/ ||
+                           $match =~ /Received SIGTERM - initiating graceful shutdown/ ||
+                           $match =~ /Received SIGHUP - reloading configuration/ ||
+                           $match =~ /Loaded environment from \/vault\/agent\/app\.env/ ||
+                           $match =~ /Reloaded environment from \/vault\/agent\/app\.env/ ||
+                           $match =~ /MyApp shutting down gracefully/ ||
+                           $match =~ /MyApp stopped cleanly/ ||
+                           $match =~ /automatically restarted every ~30s when certificates rotate/;
+    '
+}
+
+show_current_startup_context() {
+    print_step "Current startup context:"
+    docker exec vault-agent sh -c 'if [ -f /tmp/myapp.log ]; then tail -n 200 /tmp/myapp.log; fi' | \
+        perl -ne '
+            BEGIN { $| = 1 }
+            $visible = $_;
+            $visible =~ s/\0//g;
+            $visible =~ s/[^\x09\x0A\x0D\x1B\x20-\x7E]//g;
+
+            $match = $visible;
+            $match =~ s/\e\[[0-9;?]*[ -\/]*[@-~]//g;
+
+            $startup = $visible if $match =~ /MyApp starting up \(PID:/;
+            $env = $visible if $match =~ /Loaded environment from \/vault\/agent\/app\.env/ ||
+                                     $match =~ /Reloaded environment from \/vault\/agent\/app\.env/;
+            $serial = $visible if $match =~ /Environment CERT_SERIAL:/;
+
+            END {
+                print $startup if defined $startup;
+                print $env if defined $env;
+                print $serial if defined $serial;
+            }
+        '
+}
+
 # Main demo function
 main() {
     clear
@@ -186,28 +236,13 @@ main() {
     echo -e "${YELLOW}   - Iteration counter resets / heartbeat lines${NC}"
     echo -e "${YELLOW}   - Reload and shutdown events during rotation${NC}"
     
+    show_current_startup_context
+    
     echo -e "\n${PURPLE}Starting live log monitoring... (Press Ctrl+C to stop)${NC}\n"
     
     # Follow the app log written by restart-app.sh inside the container.
     docker exec vault-agent sh -c 'touch /tmp/myapp.log && exec tail -n 0 -f /tmp/myapp.log' | \
-        perl -ne '
-            BEGIN { $| = 1 }
-            s/\0//g;
-            s/\e\[[0-9;]*[A-Za-z]//g;
-            s/[^\x09\x0A\x0D\x20-\x7E]//g;
-            print if /MyApp starting up \(PID:/ ||
-                     /Environment CERT_SERIAL:/ ||
-                     /Current certificate serial:/ ||
-                     /Application running\.\.\. \(iteration / ||
-                     /Checking certificate status/ ||
-                     /Received SIGTERM - initiating graceful shutdown/ ||
-                     /Received SIGHUP - reloading configuration/ ||
-                     /Loaded environment from \/vault\/agent\/app\.env/ ||
-                     /Reloaded environment from \/vault\/agent\/app\.env/ ||
-                     /MyApp shutting down gracefully/ ||
-                     /MyApp stopped cleanly/ ||
-                     /automatically restarted every ~30s when certificates rotate/;
-        ' &
+        filter_live_monitor_output &
     LOG_PID=$!
     
     # Wait for user to stop
