@@ -22,23 +22,23 @@ print_header() {
 }
 
 print_step() {
-    echo -e "${GREEN}🔹 $1${NC}"
+    echo -e "${GREEN}STEP: $1${NC}"
 }
 
 print_important() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+    echo -e "${YELLOW}WARNING: $1${NC}"
 }
 
 print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+    echo -e "${GREEN}OK: $1${NC}"
 }
 
 print_error() {
-    echo -e "${RED}❌ $1${NC}"
+    echo -e "${RED}ERROR: $1${NC}"
 }
 
 print_info() {
-    echo -e "${CYAN}ℹ️  $1${NC}"
+    echo -e "${CYAN}INFO: $1${NC}"
 }
 
 # Function to wait for user input
@@ -134,17 +134,17 @@ show_agent_logs() {
 # Main demo function
 main() {
     clear
-    print_header "🎯 VAULT AGENT PROCESS SUPERVISOR DEMO"
+    print_header "VAULT AGENT PROCESS SUPERVISOR DEMO"
     
     echo -e "${CYAN}This demo showcases HashiCorp Vault Agent's process supervisor functionality"
     echo -e "with automatic certificate rotation and application restart.${NC}\n"
     
     echo -e "${YELLOW}Key Features:${NC}"
-    echo -e "• 🔄 Automatic certificate rotation (30-second TTL)"
-    echo -e "• 🚀 Process supervisor restarts application on certificate changes"
-    echo -e "• 📊 Environment template generation"
-    echo -e "• 🔐 Zero-downtime certificate rotation"
-    echo -e "• 📋 Signal handling (SIGTERM, SIGHUP)"
+    echo -e "- Automatic certificate rotation (30-second TTL)"
+    echo -e "- Process supervisor restarts application on certificate changes"
+    echo -e "- Environment template generation"
+    echo -e "- Zero-downtime certificate rotation"
+    echo -e "- Signal handling (SIGTERM, SIGHUP)"
     
     wait_for_user
     
@@ -164,10 +164,10 @@ main() {
     # Step 2: Show current setup
     print_header "Step 2: Current Configuration"
     print_step "Vault Agent configuration highlights:"
-    echo -e "${CYAN}   • Template with command execution: /bin/sh /vault/config/myapp.sh${NC}"
-    echo -e "${CYAN}   • Environment template: vault-agent-config/env.tpl${NC}"
-    echo -e "${CYAN}   • Certificate TTL: 30 seconds${NC}"
-    echo -e "${CYAN}   • Auto-restart on certificate rotation${NC}"
+    echo -e "${CYAN}   - Template with command execution: /bin/sh /vault/config/myapp.sh${NC}"
+    echo -e "${CYAN}   - Environment template: vault-agent-config/env.tpl${NC}"
+    echo -e "${CYAN}   - Certificate TTL: 30 seconds${NC}"
+    echo -e "${CYAN}   - Auto-restart on certificate rotation${NC}"
     
     wait_for_user
     
@@ -181,25 +181,25 @@ main() {
     print_header "Step 4: Live Application Monitoring"
     print_step "Monitoring application logs in real-time..."
     print_important "Watch for:"
-    echo -e "${YELLOW}   • Certificate serial number changes${NC}"
-    echo -e "${YELLOW}   • Process restarts (PID changes)${NC}"
-    echo -e "${YELLOW}   • Iteration counter resets${NC}"
-    echo -e "${YELLOW}   • Environment variable reloads${NC}"
+    echo -e "${YELLOW}   - Certificate serial number changes${NC}"
+    echo -e "${YELLOW}   - Process restarts (PID changes)${NC}"
+    echo -e "${YELLOW}   - Iteration counter resets${NC}"
+    echo -e "${YELLOW}   - Environment variable reloads${NC}"
     
     echo -e "\n${PURPLE}Starting live log monitoring... (Press Ctrl+C to stop)${NC}\n"
     
     # Follow logs in real-time
-    docker logs vault-agent -f | grep -E --line-buffered "(🚀|🔄|📜|🔧|iteration|Serial|PID:|MyApp starting)" &
+    docker logs vault-agent -f | grep -E --line-buffered "(INFO:|CERT:|Application running|Current certificate serial|PID:|MyApp starting)" &
     LOG_PID=$!
     
     # Wait for user to stop
     trap "kill $LOG_PID 2>/dev/null || true" EXIT
     
     echo -e "\n${GREEN}Demo completed! You should have observed:${NC}"
-    echo -e "${GREEN}✅ Automatic application restarts every ~30 seconds${NC}"
-    echo -e "${GREEN}✅ Certificate serial number changes${NC}"
-    echo -e "${GREEN}✅ Process ID changes indicating real restarts${NC}"
-    echo -e "${GREEN}✅ Environment variable reloading${NC}"
+    echo -e "${GREEN}OK: Automatic application restarts every ~30 seconds${NC}"
+    echo -e "${GREEN}OK: Certificate serial number changes${NC}"
+    echo -e "${GREEN}OK: Process ID changes indicating real restarts${NC}"
+    echo -e "${GREEN}OK: Environment variable reloading${NC}"
     
     wait
 }
