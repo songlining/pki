@@ -196,6 +196,7 @@ main() {
             s/\e\[[0-9;]*[A-Za-z]//g;
             s/[^\x09\x0A\x0D\x20-\x7E]//g;
             print if /MyApp starting up \(PID:/ ||
+                     /Environment CERT_SERIAL:/ ||
                      /Current certificate serial:/ ||
                      /Application running\.\.\. \(iteration / ||
                      /Checking certificate status/ ||
