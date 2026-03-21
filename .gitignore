@@ -46,3 +46,6 @@ vault-agent-config/role-id
 vault-agent-config/secret-id
 
 vault-agent-output/
+
+# Local git worktrees
+.worktrees/
