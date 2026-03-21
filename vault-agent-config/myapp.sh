@@ -9,7 +9,7 @@ RUNNING=true
 
 # Function to log messages with timestamp and color
 log() {
-    echo -e "\033[1;32m[$(date '+%Y-%m-%d %H:%M:%S')] INFO: $*\033[0m"
+    echo -e "\033[1;32m[$(date '+%Y-%m-%d %H:%M:%S')]\033[0m INFO: $*"
 }
 
 # Function to log important events in cyan
