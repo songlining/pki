@@ -13,48 +13,30 @@ NC='\033[0m'
 
 echo -e "${BLUE}Vault Community Edition Quick Start${NC}"
 echo "=========================================="
-
-# Stop any running containers
-echo -e "${YELLOW}Stopping existing containers...${NC}"
-docker-compose down -v >/dev/null 2>&1 || true
-
-# Start Vault CE in dev mode
-echo -e "${YELLOW}Starting Vault in dev mode...${NC}"
-docker compose up -d vault
-
-# Wait for Vault to be ready
-echo -e "${YELLOW}Waiting for Vault...${NC}"
-timeout=30
-counter=0
-while ! curl -s http://localhost:8200/v1/sys/health >/dev/null 2>&1; do
-    if [ $counter -ge $timeout ]; then
-        echo -e "${RED}Timeout${NC}"
-        exit 1
-    fi
-    echo "Waiting... ($((counter + 1))/$timeout)"
-    sleep 1
-    counter=$((counter + 1))
-done
-
-echo -e "${GREEN}Vault is running!${NC}"
-
-# Set environment
-export VAULT_ADDR=http://localhost:8200
-export VAULT_TOKEN=myroot
-
-echo -e "${YELLOW}Checking Vault version...${NC}"
-VAULT_VERSION=$(vault version | head -1)
-echo -e "${BLUE}${VAULT_VERSION}${NC}"
-
-echo -e "${YELLOW}Setting up PKI...${NC}"
-vault secrets enable pki || echo "PKI already enabled"
-vault secrets tune -max-lease-ttl=8760h pki || true
-
-echo -e "${GREEN}Setup complete!${NC}"
-echo -e "${BLUE}Vault URL: ${GREEN}http://localhost:8200${NC}"
-echo -e "${BLUE}Root Token: ${GREEN}myroot${NC}"
+echo "This path leaves the repo ready for a live demo, workshop, or operator walkthrough."
 echo ""
-echo -e "${YELLOW}Next steps:${NC}"
-echo -e "   ${GREEN}./vault-init.sh${NC}       # Configure root/intermediate PKI and AppRole"
-echo -e "   ${GREEN}make setup-agent${NC}     # Prepare Vault Agent credentials"
-echo -e "   ${GREEN}make demo${NC}            # Run the interactive PKI demo"
+
+# Stop any running containers without deleting local volumes
+echo -e "${YELLOW}Stopping existing containers...${NC}"
+docker compose down >/dev/null 2>&1 || true
+
+echo -e "${YELLOW}Starting Vault and Vault Agent containers...${NC}"
+docker compose up -d
+
+echo -e "${YELLOW}Initializing PKI and AppRole...${NC}"
+./vault-init.sh
+
+echo -e "${YELLOW}Refreshing Vault Agent bootstrap credentials...${NC}"
+./setup-agent-credentials.sh
+docker restart vault-agent >/dev/null
+
+echo -e "${YELLOW}Running demo preflight...${NC}"
+./demo-preflight.sh
+
+echo -e "${GREEN}Quick start complete!${NC}"
+echo ""
+echo "Choose your path:"
+echo -e "   ${GREEN}make live-demo${NC}      # Short live story: operator first, then automation"
+echo -e "   ${GREEN}make workshop-demo${NC}  # Hands-on sequence for self-serve learners"
+echo -e "   ${GREEN}make operator-demo${NC}  # Focus on AppRole, templates, and rotation"
+echo -e "   ${GREEN}make reset-demo${NC}    # Safe cleanup of known generated demo state"

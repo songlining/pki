@@ -83,6 +83,9 @@ echo -e "${COLOR_RESET}"
 echo ""
 
 echo -e "${YELLOW}This demo shows Vault Agent automatic PKI certificate management with templating${COLOR_RESET}"
+echo "Operator vs machine framing:"
+echo "   - Operator bootstraps PKI, AppRole, and least-privilege policy"
+echo "   - Vault Agent is the machine actor that authenticates, renders, and rotates short-lived certs"
 echo ""
 
 # Set environment variables for Vault Agent
@@ -135,7 +138,7 @@ echo "   - AppRole provides token with specific policies for PKI operations"
 
 echo
 echo "   Agent's AppRole Configuration:"
-docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault read auth/approle/role/vault-agent-role' | grep -E "(token_policies|token_ttl|token_max_ttl)" | sed 's/^/      /'
+docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault read auth/approle/role/vault-agent-role' | grep -E "(token_no_default_policy|token_policies|token_ttl|token_max_ttl)" | sed 's/^/      /'
 
 echo
 echo "   PKI Policy Content (what allows agent to rotate certificates):"

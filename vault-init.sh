@@ -31,7 +31,7 @@ counter=0
 while ! curl -s $VAULT_ADDR/v1/sys/health >/dev/null 2>&1; do
     if [ $counter -ge $timeout ]; then
         echo -e "${RED}Timeout waiting for Vault to start${NC}"
-        echo -e "${YELLOW}Check container logs: docker-compose logs vault${NC}"
+        echo -e "${YELLOW}Check container logs: docker compose logs vault${NC}"
         exit 1
     fi
     echo "Waiting for Vault server... ($((counter + 1))/$timeout)"

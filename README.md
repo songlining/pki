@@ -8,6 +8,8 @@ The repo now defaults to Vault Community Edition, so your audience can download 
 
 - Vault PKI with root and intermediate certificate authorities
 - Vault Agent for automatic certificate management
+- Guided audience tracks for live demo, workshop, and operator-focused walkthroughs
+- Demo preflight and safer reset workflow for presenters
 - Least-privilege AppRole policy for Vault Agent
 - 30-second certificate rotation for live demos
 - Process supervision that restarts applications on certificate renewal
@@ -29,7 +31,8 @@ No license file is required.
 
 ```bash
 make setup
-make agent-demo
+make preflight
+make live-demo
 ```
 
 ### Step by step
@@ -38,7 +41,8 @@ make agent-demo
 make start
 make init
 make setup-agent
-make demo
+make preflight
+make workshop-demo
 ```
 
 ### Alternative quick start
@@ -46,6 +50,12 @@ make demo
 ```bash
 ./quick-start.sh
 ```
+
+After setup, choose the path that matches your audience:
+
+- `make live-demo` - short narrative flow for a live presentation
+- `make workshop-demo` - self-serve sequence for hands-on learners
+- `make operator-demo` - AppRole, templates, and rotation-focused walkthrough
 
 ## What gets started
 
@@ -62,6 +72,20 @@ This setup includes two main containers:
    - Process restart hooks for certificate updates
 
 ## Main demos
+
+### Guided entrypoints
+
+```bash
+make live-demo
+make workshop-demo
+make operator-demo
+```
+
+These guided entrypoints frame the repo as one story with three audience-specific paths:
+
+- operator establishes trust and policy
+- machine consumes short-lived certificates through Vault Agent
+- optional application/process demos show what rotation looks like in practice
 
 ### Traditional PKI demo
 
@@ -119,10 +143,15 @@ make stop
 make init
 make setup-agent
 make setup
+make preflight
+make live-demo
+make workshop-demo
+make operator-demo
 make demo
 make agent-demo
 make process-demo
 make watch-rotation
+make reset-demo
 make status
 make clean
 ```
@@ -150,13 +179,23 @@ make clean
 
 - `docker-compose.yml` - default CE demo environment
 - `vault-init.sh` - PKI and AppRole initialization
+- `demo-preflight.sh` - read-only demo readiness check
+- `demo-paths.sh` - guided audience-track entrypoints
 - `pki-demo.sh` - interactive PKI walkthrough
 - `agent-pki-demo.sh` - Vault Agent certificate rotation walkthrough
 - `demo-process-supervisor.sh` - application restart demo
+- `reset-demo-state.sh` - safer cleanup of known generated demo files
 - `setup-agent-credentials.sh` - writes the AppRole policy and Agent credentials
 - `watch-rotation.sh` - shows certificate rotations with validity and serial details
 - `vault-agent-config/agent.hcl` - Agent config
 - `vault-agent-config/*.tpl` - certificate rendering templates
+
+## Additional references
+
+- `agent-demo-diagrams.md` - Mermaid diagrams for the Vault Agent flow and operator/machine split
+- `tls-cert-gen-manual-vs-vault.md` - side-by-side explanation of manual certificate handling versus Vault-based issuance
+- `manual-pki-tls-cert-gen.md` - detailed Mermaid sequence for the traditional CSR-and-ticket flow
+- `GET_TRIAL_LICENSE.md` - legacy note explaining that the repo now runs on Vault CE without a license
 
 ## Useful checks
 
@@ -173,6 +212,7 @@ openssl x509 -in vault-agent-output/app.crt -noout -dates -serial
 - The demo runs Vault in development mode
 - The root token is hardcoded to `myroot` for convenience
 - TLS is disabled on the Vault API endpoint for ease of local testing
+- Demo cleanup defaults now target known generated files rather than broad wildcard deletion
 - The Vault Agent AppRole is scoped to `pki/issue/example-role` plus token `lookup-self` and `renew-self`
 - The AppRole is configured without the default policy
 - This setup is for demos and learning, not production use

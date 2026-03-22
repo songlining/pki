@@ -29,8 +29,20 @@ DEMO_PROMPT=""
 export VAULT_ADDR="http://localhost:8200"
 export VAULT_TOKEN="myroot"
 
-# Clean up previous demo artifacts
-rm -f *.crt *.csr *.key *.pem *.txt 2>/dev/null
+# Clean up known demo artifacts from previous runs without touching unrelated files.
+for artifact in \
+    root-ca.crt \
+    intermediate.csr \
+    intermediate.crt \
+    app-cert.pem \
+    api-private-key.pem \
+    ca-chain.pem \
+    csr-app-key.pem \
+    csr-app.csr \
+    csr-app-cert.pem \
+    serial.txt; do
+    rm -f "$artifact" 2>/dev/null || true
+done
 
 # Reset PKI engines for clean demo
 echo "Cleaning up from previous demo runs..."
@@ -49,6 +61,10 @@ echo -e "${COLOR_RESET}"
 echo ""
 
 echo -e "${YELLOW}This demo shows how to use HashiCorp Vault for PKI certificate management${COLOR_RESET}"
+echo "This is the operator path:"
+echo "  - Operator establishes trust with the root and intermediate CA"
+echo "  - Operator chooses direct issuance or CSR signing depending on key custody"
+echo "  - The follow-on Agent demos show the machine path for short-lived renewal"
 echo ""
 wait
 

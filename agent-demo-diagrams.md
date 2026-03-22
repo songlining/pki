@@ -1,5 +1,10 @@
 # Vault Agent PKI Demo - Mermaid Diagrams
 
+This demo works best when framed as two cooperating roles:
+
+- Operator: prepares PKI, policy, and AppRole bootstrap
+- Machine: Vault Agent authenticates, renders, and rotates short-lived certificates
+
 ## Overview: `make agent-demo` Workflow
 
 ```mermaid
@@ -105,15 +110,15 @@ sequenceDiagram
     participant Vault as Vault Server :8200
     participant Files as Config Files
     
-    User->>Script: Execute setup script
+    User->>Script: Execute setup script as operator
     Script->>Vault: Enable AppRole auth method
     Vault-->>Script: OK (or already enabled)
     
-    Script->>Vault: Create PKI policy<br/>(pki/* permissions)
+    Script->>Vault: Create PKI policy<br/>(issue endpoint + token self-management)
     Vault-->>Script: Policy created
     
     Script->>Vault: Create/update AppRole<br/>(vault-agent-role)
-    Note over Script,Vault: Policies: default, pki-policy<br/>TTL: 1h, Max TTL: 4h
+    Note over Script,Vault: Policies: pki-policy only<br/>No default policy<br/>TTL: 1h, Max TTL: 4h
     Vault-->>Script: AppRole configured
     
     Script->>Vault: Read role-id
