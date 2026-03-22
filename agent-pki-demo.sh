@@ -135,15 +135,15 @@ echo "   - AppRole provides token with specific policies for PKI operations"
 
 echo
 echo "   Agent's AppRole Configuration:"
-docker exec vault-enterprise sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault read auth/approle/role/vault-agent-role' | grep -E "(token_policies|token_ttl|token_max_ttl)" | sed 's/^/      /'
+docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault read auth/approle/role/vault-agent-role' | grep -E "(token_policies|token_ttl|token_max_ttl)" | sed 's/^/      /'
 
 echo
 echo "   PKI Policy Content (what allows agent to rotate certificates):"
-docker exec vault-enterprise sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault policy read pki-policy' | sed 's/^/      /'
+docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault policy read pki-policy' | sed 's/^/      /'
 
 echo
 echo "   Agent Token Information:"
-docker exec vault-enterprise sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN='$AGENT_TOKEN' && vault token lookup -format=json' | jq -r '.data | "Policies: \(.policies | join(", "))\nTTL: \(.ttl)s\nRenewable: \(.renewable)\nEntity ID: \(.entity_id)"' | sed 's/^/      /'
+docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN='$AGENT_TOKEN' && vault token lookup -format=json' | jq -r '.data | "Policies: \(.policies | join(", "))\nTTL: \(.ttl)s\nRenewable: \(.renewable)\nEntity ID: \(.entity_id)"' | sed 's/^/      /'
 
 echo
 echo -e "${GREEN}OK: Agent is properly authorized for PKI operations!${COLOR_RESET}"

@@ -51,8 +51,8 @@ wait_for_user() {
 check_services() {
     print_step "Checking Vault and Vault Agent status..."
     
-    if ! docker ps | grep -q vault-enterprise; then
-        print_error "Vault Enterprise is not running!"
+    if ! docker ps --format '{{.Names}}' | grep -qx vault; then
+        print_error "Vault is not running!"
         exit 1
     fi
     

@@ -1,22 +1,18 @@
-version: '3.8'
-
 services:
   vault:
-    image: hashicorp/vault-enterprise:1.21.4-ent
-    container_name: vault-enterprise
+    image: hashicorp/vault:1.21.4
+    container_name: vault
     environment:
       VAULT_DEV_ROOT_TOKEN_ID: "${VAULT_DEV_ROOT_TOKEN_ID}"
       VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
       VAULT_ADDR: "${VAULT_ADDR}"
       VAULT_API_ADDR: "${VAULT_ADDR}"
-      VAULT_LICENSE_PATH: "/vault/config/vault.hclic"
     cap_add:
       - IPC_LOCK
     volumes:
       - vault_data:/vault/data
       - vault_logs:/vault/logs
       - ./vault-config:/vault/config
-      - ./vault.hclic:/vault/config/vault.hclic:ro
     ports:
       - "8200:8200"
     networks:
@@ -25,7 +21,7 @@ services:
     command: vault server -dev -dev-root-token-id="${VAULT_DEV_ROOT_TOKEN_ID}" -dev-listen-address="0.0.0.0:8200"
 
   vault-agent:
-    image: hashicorp/vault:latest
+    image: hashicorp/vault:1.21.4
     container_name: vault-agent
     depends_on:
       - vault

@@ -43,12 +43,12 @@ vault secrets tune -max-lease-ttl=43800h pki_int 2>/dev/null || true
 
 # Demo title
 echo -e "${BLUE}"
-echo "==== HashiCorp Vault Enterprise PKI Certificate ===="
+echo "==== HashiCorp Vault PKI Certificate ===="
 echo "==== Issuance Demo ===="
 echo -e "${COLOR_RESET}"
 echo ""
 
-echo -e "${YELLOW}This demo shows how to use HashiCorp Vault Enterprise for PKI certificate management${COLOR_RESET}"
+echo -e "${YELLOW}This demo shows how to use HashiCorp Vault for PKI certificate management${COLOR_RESET}"
 echo ""
 wait
 
@@ -56,11 +56,11 @@ wait
 echo -e "${BLUE}"
 echo "==== Step 1: Verify Vault Status ===="
 echo -e "${COLOR_RESET}"
-echo "Let's start by checking our Vault Enterprise instance:"
+echo "Let's start by checking our Vault instance:"
 echo ""
 pe "vault status"
 echo ""
-echo "OK: Vault Enterprise is running in development mode (auto-unsealed)"
+echo "OK: Vault is running in development mode (auto-unsealed)"
 wait
 
 # Show enabled secrets engines
@@ -204,30 +204,30 @@ echo "  - ca_chain: The certificate chain"
 echo "  - expiration: Unix timestamp of expiration"
 wait
 
-# Issue certificate with metadata
+# Sign a locally generated CSR
 echo -e "${BLUE}"
-echo "==== Step 8.5: Issue Certificate with Metadata ===="
+echo "==== Step 8.25: Sign a Locally Generated CSR ===="
 echo -e "${COLOR_RESET}"
-echo "HashiCorp Vault supports adding custom metadata to certificates:"
+echo "If you want the private key to stay outside Vault, generate it locally and send only a CSR:"
 echo ""
-echo "First, let's create metadata for our certificate:"
-pe "printf \"%s\n\" \"{\\\"department\\\": \\\"Engineering\\\", \\\"owner\\\": \\\"DevOps Team\\\", \\\"application\\\": \\\"Web Server\\\", \\\"environment\\\": \\\"Production\\\", \\\"cost_center\\\": \\\"CC-1001\\\"}\" | base64 > cert_metadata.txt"
-pe "cat cert_metadata.txt"
-
+echo "Generate a local private key and CSR:"
+p "openssl req \\\\
+  -new -newkey rsa:2048 -nodes \\\\
+  -keyout csr-app-key.pem \\\\
+  -out csr-app.csr \\\\
+  -subj \"/CN=csr.example.com/O=HashiCorp Demo/C=AU\""
+run_cmd "openssl req -new -newkey rsa:2048 -nodes -keyout csr-app-key.pem -out csr-app.csr -subj \"/CN=csr.example.com/O=HashiCorp Demo/C=AU\""
 echo ""
-echo "Now issue a certificate with metadata:"
+echo "Now ask Vault to sign the CSR without generating the private key:"
 p "vault write \\\\
-  -field=serial_number \\\\
-  pki_int/issue/web-server \\\\
-  common_name=\"metadata.example.com\" \\\\
+  -field=certificate \\\\
+  pki_int/sign/web-server \\\\
+  csr=@csr-app.csr \\\\
   ttl=\"24h\" \\\\
-  cert_metadata=\$(cat cert_metadata.txt) \\\\
-  > cert_serial.txt"
-run_cmd "vault write -field=serial_number pki_int/issue/web-server common_name=\"metadata.example.com\" ttl=\"24h\" cert_metadata=\$(cat cert_metadata.txt) > cert_serial.txt"
-pe "cat cert_serial.txt"
-
+  > csr-app-cert.pem"
+run_cmd "vault write -field=certificate pki_int/sign/web-server csr=@csr-app.csr ttl=\"24h\" > csr-app-cert.pem"
 echo ""
-echo "Certificate with metadata issued successfully!"
+echo "The signed certificate came from Vault, but the private key stayed in csr-app-key.pem"
 wait
 
 # Save certificate components to files
@@ -265,33 +265,9 @@ echo "Certificate files saved:"
 pe "ls -la *.pem *.crt *.csr"
 wait
 
-# Retrieve certificate metadata
-echo -e "${BLUE}"
-echo "==== Step 10: Retrieve Certificate Metadata ===="
-echo -e "${COLOR_RESET}"
-echo "Let's retrieve and examine the certificate metadata we stored:"
-echo ""
-echo "List all certificates with metadata:"
-pe "vault list pki_int/cert-metadata/"
-echo ""
-echo "Read metadata for our certificate:"
-p "vault read \\\\
-  pki_int/cert-metadata/\$(cat cert_serial.txt)"
-run_cmd "vault read pki_int/cert-metadata/\$(cat cert_serial.txt)"
-echo ""
-echo "Decode the metadata to see the original JSON:"
-p "vault read \\\\
-  -field=cert_metadata \\\\
-  pki_int/cert-metadata/\$(cat cert_serial.txt) \\\\
-  | base64 -d"
-run_cmd "vault read -field=cert_metadata pki_int/cert-metadata/\$(cat cert_serial.txt) | base64 -d"
-echo ""
-echo "Certificate metadata successfully retrieved and decoded!"
-wait
-
 # Verify certificate details
 echo -e "${BLUE}"
-echo "==== Step 11: Verify Certificate Details ===="
+echo "==== Step 10: Verify Certificate Details ===="
 echo -e "${COLOR_RESET}"
 echo "Let's examine the certificate we just issued:"
 echo ""
@@ -309,7 +285,7 @@ wait
 
 # Show certificate chain
 echo -e "${BLUE}"
-echo "==== Step 12: Examine Certificate Chain ===="
+echo "==== Step 11: Examine Certificate Chain ===="
 echo -e "${COLOR_RESET}"
 echo "Let's verify our certificate chain is properly constructed:"
 echo ""
@@ -325,7 +301,7 @@ wait
 
 # Revoke a certificate
 echo -e "${BLUE}"
-echo "==== Step 13: Certificate Revocation ===="
+echo "==== Step 12: Certificate Revocation ===="
 echo -e "${COLOR_RESET}"
 echo "Demonstrate certificate revocation capabilities:"
 echo ""
@@ -354,7 +330,7 @@ wait
 
 # Show CRL
 echo -e "${BLUE}"
-echo "==== Step 14: Certificate Revocation List ===="
+echo "==== Step 13: Certificate Revocation List ===="
 echo -e "${COLOR_RESET}"
 echo "View the Certificate Revocation List:"
 echo ""
@@ -375,12 +351,11 @@ echo ""
 printf '%b\n' "${GREEN}PKI Demo Completed Successfully!${COLOR_RESET}"
 echo ""
 echo "What we accomplished:"
-echo "  - Configured Vault Enterprise PKI engines"
+echo "  - Configured Vault PKI engines"
 echo "  - Generated root and intermediate Certificate Authorities"
 echo "  - Created certificate roles with domain restrictions"
 echo "  - Issued multiple server certificates with SANs and IP SANs"
-echo "  - Added custom metadata to certificates for tracking"
-echo "  - Retrieved and decoded certificate metadata"
+echo "  - Signed a CSR while keeping the private key outside Vault"
 echo "  - Saved certificate components to files"
 echo "  - Verified certificate chain integrity"
 echo "  - Demonstrated certificate revocation"

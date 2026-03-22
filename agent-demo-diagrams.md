@@ -59,7 +59,7 @@ graph TB
     end
     
     subgraph Docker["Docker Network: vault-network"]
-        subgraph VaultServer["vault-enterprise container"]
+        subgraph VaultServer["vault container"]
             VaultDev[Vault Server<br/>:8200<br/>Dev Mode]
             PKIEngine[PKI Secrets Engine]
             AppRoleAuth[AppRole Auth]
@@ -454,7 +454,7 @@ C4Context
     }
     
     System_Boundary(docker, "Docker Environment") {
-        Container(vault, "Vault Server", "Enterprise", "PKI engine, AppRole auth")
+        Container(vault, "Vault Server", "Vault CE", "PKI engine, AppRole auth")
         Container(agent, "Vault Agent", "OSS", "Auto-auth, templating, caching")
     }
     
@@ -540,4 +540,4 @@ The `make agent-demo` command demonstrates HashiCorp Vault Agent's automatic PKI
 5. **Automatic Renewal**: Agent renews certificates ~15 seconds before expiry
 6. **Live Monitoring**: Demonstrates rotation detection in real-time
 
-The demo showcases enterprise-grade certificate lifecycle management without manual intervention.
+The demo showcases automated certificate lifecycle management without manual intervention.

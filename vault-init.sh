@@ -42,10 +42,15 @@ done
 echo -e "${GREEN}Vault is ready!${NC}"
 vault status
 
-# Check Vault version for informational purposes
-echo -e "${YELLOW}Checking Vault version...${NC}"
-VAULT_VERSION=$(vault version | head -1)
-echo -e "${BLUE}${VAULT_VERSION}${NC}"
+# Check Vault versions for informational purposes
+echo -e "${YELLOW}Checking Vault versions...${NC}"
+LOCAL_VAULT_VERSION=$(vault version | head -1)
+echo -e "${BLUE}Local Vault CLI: ${LOCAL_VAULT_VERSION}${NC}"
+
+if docker ps --format '{{.Names}}' | grep -qx vault; then
+    SERVER_VAULT_VERSION=$(docker exec vault vault version | head -1)
+    echo -e "${BLUE}Vault server container: ${SERVER_VAULT_VERSION}${NC}"
+fi
 
 # Enable PKI secrets engine if not already enabled
 echo -e "${YELLOW}Enabling PKI secrets engine...${NC}"
