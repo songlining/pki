@@ -12,20 +12,21 @@ vault auth enable approle 2>/dev/null || echo "AppRole already enabled"
 
 echo "2. Creating PKI policy..."
 vault policy write pki-policy - << EOF
-path "pki/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
-}
-path "sys/mounts/pki" {
+path "pki/issue/example-role" {
   capabilities = ["create", "update"]
 }
-path "sys/mounts/pki/*" {
-  capabilities = ["create", "read", "update", "delete"]
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+path "auth/token/renew-self" {
+  capabilities = ["update"]
 }
 EOF
 
 echo "3. Creating/updating AppRole..."
 vault write auth/approle/role/vault-agent-role \
-    token_policies=default,pki-policy \
+    token_policies=pki-policy \
+    token_no_default_policy=true \
     token_ttl=1h \
     token_max_ttl=4h
 

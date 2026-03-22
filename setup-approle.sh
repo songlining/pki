@@ -9,7 +9,8 @@ vault auth enable approle
 
 # Create a role for vault-agent
 vault write auth/approle/role/vault-agent-role \
-    token_policies=default \
+    token_policies=pki-policy \
+    token_no_default_policy=true \
     token_ttl=1h \
     token_max_ttl=4h
 

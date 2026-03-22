@@ -109,14 +109,14 @@ fi
 # Create policy for PKI operations
 echo -e "${YELLOW}Creating PKI policy...${NC}"
 vault policy write pki-policy - <<EOF
-path "pki/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
-}
-path "sys/mounts/pki" {
+path "pki/issue/example-role" {
   capabilities = ["create", "update"]
 }
-path "sys/mounts/pki/*" {
-  capabilities = ["create", "read", "update", "delete"]
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+path "auth/token/renew-self" {
+  capabilities = ["update"]
 }
 EOF
 
@@ -124,6 +124,7 @@ EOF
 echo -e "${YELLOW}Creating AppRole 'vault-agent-role'...${NC}"
 vault write auth/approle/role/vault-agent-role \
     token_policies="pki-policy" \
+    token_no_default_policy=true \
     token_ttl=1h \
     token_max_ttl=4h
 

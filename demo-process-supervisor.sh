@@ -118,8 +118,8 @@ show_current_cert() {
         SERIAL=$(openssl x509 -in "./vault-agent-output/app.crt" -noout -serial 2>/dev/null | cut -d= -f2)
         DATES=$(openssl x509 -in "./vault-agent-output/app.crt" -noout -dates 2>/dev/null)
         print_info "Current certificate serial: $SERIAL"
-        echo -e "${CYAN}   $(echo "$DATES" | grep notBefore | cut -d= -f2-)${NC}"
-        echo -e "${CYAN}   $(echo "$DATES" | grep notAfter | cut -d= -f2-)${NC}"
+        echo -e "${CYAN}   Valid from: $(echo "$DATES" | grep notBefore | cut -d= -f2-)${NC}"
+        echo -e "${CYAN}   Expires:    $(echo "$DATES" | grep notAfter | cut -d= -f2-)${NC}"
     else
         print_error "No certificate file found"
     fi

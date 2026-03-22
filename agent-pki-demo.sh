@@ -143,7 +143,7 @@ docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT
 
 echo
 echo "   Agent Token Information:"
-docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN='$AGENT_TOKEN' && vault token lookup -format=json' | jq -r '.data | "Policies: \(.policies | join(", "))\nTTL: \(.ttl)s\nRenewable: \(.renewable)\nEntity ID: \(.entity_id)"' | sed 's/^/      /'
+docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault token lookup -format=json '"$AGENT_TOKEN" | jq -r '.data | "Policies: \(.policies | join(", "))\nTTL: \(.ttl)s\nRenewable: \(.renewable)\nEntity ID: \(.entity_id)"' | sed 's/^/      /'
 
 echo
 echo -e "${GREEN}OK: Agent is properly authorized for PKI operations!${COLOR_RESET}"
@@ -154,15 +154,15 @@ echo "================================================================="
 echo "Step 4: PKI Infrastructure Verification"
 echo "================================================================="
 echo -e "${COLOR_RESET}"
-echo "Verifying PKI infrastructure is ready through Vault Agent proxy:"
+echo "Verifying PKI infrastructure from the operator side:"
 
 echo "   PKI secrets engine status:"
-PKI_STATUS=$(curl -s -H "X-Vault-Token: $AGENT_TOKEN" $VAULT_AGENT_ADDR/v1/sys/mounts | jq -r '.data."pki/".type // empty')
+PKI_STATUS=$(curl -s -H "X-Vault-Token: myroot" http://localhost:8200/v1/sys/mounts | jq -r '.data."pki/".type // empty')
 if [ -n "$PKI_STATUS" ]; then
     echo "      Engine type: $PKI_STATUS"
 else
     # Fallback: check if we can access PKI endpoints
-    if curl -s -H "X-Vault-Token: $AGENT_TOKEN" $VAULT_AGENT_ADDR/v1/pki/ca/pem >/dev/null 2>&1; then
+    if curl -s -H "X-Vault-Token: myroot" http://localhost:8200/v1/pki/ca/pem >/dev/null 2>&1; then
         echo "      Engine type: pki (verified via CA endpoint)"
     else
         echo "      Engine type: Not accessible"
@@ -170,10 +170,10 @@ else
 fi
 
 echo "   PKI URLs configuration:"
-curl -s -H "X-Vault-Token: $AGENT_TOKEN" $VAULT_AGENT_ADDR/v1/pki/config/urls | jq -r '.data | "      Issuing certificates: \(.issuing_certificates)\n      CRL distribution: \(.crl_distribution_points)"' 2>/dev/null || echo "      Configuration not accessible"
+curl -s -H "X-Vault-Token: myroot" http://localhost:8200/v1/pki/config/urls | jq -r '.data | "      Issuing certificates: \(.issuing_certificates)\n      CRL distribution: \(.crl_distribution_points)"' 2>/dev/null || echo "      Configuration not accessible"
 
 echo "   Available PKI roles:"
-ROLES=$(curl -s -H "X-Vault-Token: $AGENT_TOKEN" $VAULT_AGENT_ADDR/v1/pki/roles | jq -r '.data.keys[]?' 2>/dev/null)
+ROLES=$(curl -s -H "X-Vault-Token: myroot" http://localhost:8200/v1/pki/roles?list=true | jq -r '.data.keys[]?' 2>/dev/null)
 if [ -n "$ROLES" ]; then
     echo "$ROLES" | sed 's/^/      /'
 else
@@ -181,7 +181,7 @@ else
 fi
 
 echo "   Root CA certificate info:"
-CA_INFO=$(curl -s -H "X-Vault-Token: $AGENT_TOKEN" $VAULT_AGENT_ADDR/v1/pki/ca/pem | openssl x509 -noout -subject -dates 2>/dev/null)
+CA_INFO=$(curl -s -H "X-Vault-Token: myroot" http://localhost:8200/v1/pki/ca/pem | openssl x509 -noout -subject -dates 2>/dev/null)
 if [ -n "$CA_INFO" ]; then
     echo "$CA_INFO" | sed 's/^/      /'
 else
@@ -220,9 +220,16 @@ echo "Step 6: Template File Analysis"
 echo "================================================================="
 echo -e "${COLOR_RESET}"
 echo "Understanding How Agent Templates Work:"
-echo "   Let's examine the template files that define how certificates are generated:"
+echo "   Let's examine the complete files that drive agent-based certificate rotation:"
 echo
 
+echo "   Full Vault Agent Configuration (agent.hcl):"
+echo "   ------------------------------------------------------------------------"
+cat vault-agent-config/agent.hcl | sed 's/^/   /'
+echo
+echo "   ------------------------------------------------------------------------"
+
+echo
 echo "   Certificate Template (cert.tpl):"
 echo "   ------------------------------------------------------------------------"
 cat vault-agent-config/cert.tpl | sed 's/^/   /'
@@ -230,34 +237,16 @@ echo
 echo "   ------------------------------------------------------------------------"
 
 echo
-echo "   Private Key Template (key.tpl):"
-echo "   ------------------------------------------------------------------------"
-cat vault-agent-config/key.tpl | sed 's/^/   /'
-echo
-echo "   ------------------------------------------------------------------------"
-
-echo
-echo "   CA Certificate Template (ca.tpl):"
-echo "   ------------------------------------------------------------------------"
-cat vault-agent-config/ca.tpl | sed 's/^/   /'
-echo
-echo "   ------------------------------------------------------------------------"
-
-echo
-echo "   Template Explanation:"
-echo "   - {{- with secret \"path\" \"params\" -}} - Calls Vault API"
-echo "   - common_name=app.example.com - Certificate subject"
-echo "   - ttl=30s - 30-second certificate lifetime"
-echo "   - {{ .Data.certificate }} - Extracts certificate data"
-echo "   - {{ .Data.private_key }} - Extracts private key data"
-echo "   - {{ .Data.issuing_ca }} - Extracts CA certificate"
+echo "   The other templates follow the same pattern:"
+echo "   - key.tpl -> {{ .Data.private_key }}"
+echo "   - ca.tpl  -> {{ .Data.issuing_ca }}"
 echo
 echo "   When templates render, Vault Agent:"
-echo "   1. Calls PKI API with specified parameters"
-echo "   2. Receives certificate, key, and CA data"
-echo "   3. Writes data to destination files (/vault/agent/app.*)"
-echo "   4. Sets proper file permissions"
-echo "   5. Schedules next renewal before expiry"
+echo "   1. Uses AppRole auto-auth to get a token"
+echo "   2. Calls pki/issue/example-role with common_name=app.example.com and ttl=30s"
+echo "   3. Writes the rendered outputs to /vault/agent/app.* and /vault/agent/ca.crt"
+echo "   4. Sets the file permissions from agent.hcl"
+echo "   5. Re-renders before the short-lived cert expires"
 wait_for_user
 
 echo -e "${BLUE}"

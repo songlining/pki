@@ -14,14 +14,18 @@ ensure_agent_credentials
 show_cert_info() {
     echo "TIME: $(date '+%H:%M:%S') - Certificate & Key Status:"
     if [ -f "vault-agent-output/app.crt" ]; then
-        CERT_INFO=$(openssl x509 -in vault-agent-output/app.crt -noout -subject -dates 2>/dev/null)
-        CERT_SERIAL=$(openssl x509 -in vault-agent-output/app.crt -noout -serial 2>/dev/null)
+        CERT_SUBJECT=$(openssl x509 -in vault-agent-output/app.crt -noout -subject 2>/dev/null | cut -d= -f2-)
+        CERT_NOT_BEFORE=$(openssl x509 -in vault-agent-output/app.crt -noout -startdate 2>/dev/null | cut -d= -f2-)
+        CERT_NOT_AFTER=$(openssl x509 -in vault-agent-output/app.crt -noout -enddate 2>/dev/null | cut -d= -f2-)
+        CERT_SERIAL=$(openssl x509 -in vault-agent-output/app.crt -noout -serial 2>/dev/null | cut -d= -f2-)
         CERT_TIME=$(stat -f %m vault-agent-output/app.crt)
         KEY_TIME=$(stat -f %m vault-agent-output/app.key)
         
         echo "   CERT: Certificate:"
-        echo "      $CERT_INFO"
-        echo "      $CERT_SERIAL"
+        echo "      Subject: $CERT_SUBJECT"
+        echo "      Valid from: $CERT_NOT_BEFORE"
+        echo "      Expires:    $CERT_NOT_AFTER"
+        echo "      Serial:     $CERT_SERIAL"
         echo "      Modified: $(date -r $CERT_TIME '+%H:%M:%S')"
         
         echo "   KEY: Private Key:"
