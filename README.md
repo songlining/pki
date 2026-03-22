@@ -8,10 +8,11 @@ The repo now defaults to Vault Community Edition, so your audience can download 
 
 - Vault PKI with root and intermediate certificate authorities
 - Vault Agent for automatic certificate management
+- Least-privilege AppRole policy for Vault Agent
 - 30-second certificate rotation for live demos
 - Process supervision that restarts applications on certificate renewal
 - Traditional interactive PKI demo with issuance, CSR signing, revocation, and CRL inspection
-- Vault Agent demo showing automatic rotation and local file rendering
+- Vault Agent demo showing automatic rotation, local file rendering, and full config/template walkthroughs
 
 ## Prerequisites
 
@@ -87,10 +88,12 @@ make agent-demo
 This walkthrough covers:
 
 - AppRole-based Agent authentication
+- least-privilege Agent policy scoped to certificate issuance plus token self-management
 - template-driven certificate generation
 - 30-second TTL demo certificates
 - automatic certificate rotation
 - local file rendering for cert, key, and CA chain
+- full-file walkthrough of `vault-agent-config/agent.hcl` and `vault-agent-config/cert.tpl`
 
 ### Process supervisor demo
 
@@ -99,6 +102,13 @@ make process-demo
 ```
 
 This extends the Agent demo by showing how an application can react to certificate changes.
+
+The rotation watcher output now highlights the most useful fields for a live audience:
+
+- certificate subject
+- `Valid from` and `Expires` timestamps
+- certificate serial number
+- matching certificate/key file modification times
 
 ## Common commands
 
@@ -143,6 +153,8 @@ make clean
 - `pki-demo.sh` - interactive PKI walkthrough
 - `agent-pki-demo.sh` - Vault Agent certificate rotation walkthrough
 - `demo-process-supervisor.sh` - application restart demo
+- `setup-agent-credentials.sh` - writes the AppRole policy and Agent credentials
+- `watch-rotation.sh` - shows certificate rotations with validity and serial details
 - `vault-agent-config/agent.hcl` - Agent config
 - `vault-agent-config/*.tpl` - certificate rendering templates
 
@@ -161,6 +173,8 @@ openssl x509 -in vault-agent-output/app.crt -noout -dates -serial
 - The demo runs Vault in development mode
 - The root token is hardcoded to `myroot` for convenience
 - TLS is disabled on the Vault API endpoint for ease of local testing
+- The Vault Agent AppRole is scoped to `pki/issue/example-role` plus token `lookup-self` and `renew-self`
+- The AppRole is configured without the default policy
 - This setup is for demos and learning, not production use
 
 ## Legacy helper scripts
