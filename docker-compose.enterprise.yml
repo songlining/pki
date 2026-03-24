@@ -1,0 +1,7 @@
+services:
+  vault:
+    image: hashicorp/vault-enterprise:1.21.4-ent
+    environment:
+      VAULT_LICENSE_PATH: "/vault/config/vault.hclic"
+    volumes:
+      - ./vault.hclic:/vault/config/vault.hclic:ro

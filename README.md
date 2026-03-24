@@ -2,11 +2,12 @@
 
 This project demonstrates a complete HashiCorp Vault PKI setup with Vault Agent for automatic certificate rotation and process supervision.
 
-The repo now defaults to Vault Community Edition, so your audience can download it and run the demo without any commercial license.
+The repo defaults to Vault Community Edition, but it can also run in Vault Enterprise mode when an existing local `vault.hclic` file is present.
 
 ## Features
 
 - Vault PKI with root and intermediate certificate authorities
+- Vault Community Edition by default, with optional Vault Enterprise container selection
 - Vault Agent for automatic certificate management
 - Guided audience tracks for live demo, workshop, and operator-focused walkthroughs
 - Demo preflight and safer reset workflow for presenters
@@ -25,6 +26,8 @@ The repo now defaults to Vault Community Edition, so your audience can download 
 
 No license file is required.
 
+If you want to use Vault Enterprise for the demo, place an existing license file at `./vault.hclic`.
+
 ## Quick Start
 
 ### Complete setup
@@ -34,6 +37,16 @@ make setup
 make preflight
 make live-demo
 ```
+
+### Enterprise edition setup
+
+```bash
+make setup VAULT_EDITION=enterprise
+make preflight VAULT_EDITION=enterprise
+make live-demo
+```
+
+This uses `docker-compose.enterprise.yml` on top of the default compose file and fails clearly if `./vault.hclic` is missing.
 
 ### Step by step
 
@@ -51,6 +64,12 @@ make workshop-demo
 ./quick-start.sh
 ```
 
+To use Vault Enterprise with the quick start path:
+
+```bash
+VAULT_EDITION=enterprise ./quick-start.sh
+```
+
 After setup, choose the path that matches your audience:
 
 - `make live-demo` - short narrative flow for a live presentation
@@ -62,7 +81,8 @@ After setup, choose the path that matches your audience:
 This setup includes two main containers:
 
 1. `vault`
-   - Vault Community Edition in development mode
+   - Vault Community Edition in development mode by default
+   - Optional Vault Enterprise image when `VAULT_EDITION=enterprise`
    - PKI root and intermediate CAs
    - AppRole authentication for Vault Agent
 
@@ -178,6 +198,7 @@ make clean
 ## Key files
 
 - `docker-compose.yml` - default CE demo environment
+- `docker-compose.enterprise.yml` - Enterprise override for the Vault container and license mount
 - `vault-init.sh` - PKI and AppRole initialization
 - `demo-preflight.sh` - read-only demo readiness check
 - `demo-paths.sh` - guided audience-track entrypoints

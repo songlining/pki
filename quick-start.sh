@@ -1,8 +1,20 @@
 #!/bin/bash
 
-# Quick Start for Vault Community Edition with proper initialization
+# Quick Start for Vault PKI demo with proper initialization
 
 set -e
+
+VAULT_EDITION="${VAULT_EDITION:-ce}"
+COMPOSE_FILES="-f docker-compose.yml"
+
+if [ "$VAULT_EDITION" = "enterprise" ]; then
+    if [ ! -f ./vault.hclic ]; then
+        echo -e "${RED}Vault Enterprise requires ./vault.hclic${NC}"
+        echo "Use VAULT_EDITION=ce or place the existing local license file at ./vault.hclic"
+        exit 1
+    fi
+    COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.enterprise.yml"
+fi
 
 # Colors
 RED='\033[0;31m'
@@ -11,17 +23,17 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}Vault Community Edition Quick Start${NC}"
+echo -e "${BLUE}Vault ${VAULT_EDITION} Quick Start${NC}"
 echo "=========================================="
 echo "This path leaves the repo ready for a live demo, workshop, or operator walkthrough."
 echo ""
 
 # Stop any running containers without deleting local volumes
 echo -e "${YELLOW}Stopping existing containers...${NC}"
-docker compose down >/dev/null 2>&1 || true
+docker compose $COMPOSE_FILES down >/dev/null 2>&1 || true
 
 echo -e "${YELLOW}Starting Vault and Vault Agent containers...${NC}"
-docker compose up -d
+docker compose $COMPOSE_FILES up -d
 
 echo -e "${YELLOW}Initializing PKI and AppRole...${NC}"
 ./vault-init.sh
@@ -35,6 +47,7 @@ echo -e "${YELLOW}Running demo preflight...${NC}"
 
 echo -e "${GREEN}Quick start complete!${NC}"
 echo ""
+echo -e "Edition: ${GREEN}${VAULT_EDITION}${NC}"
 echo "Choose your path:"
 echo -e "   ${GREEN}make live-demo${NC}      # Short live story: operator first, then automation"
 echo -e "   ${GREEN}make workshop-demo${NC}  # Hands-on sequence for self-serve learners"
