@@ -7,9 +7,6 @@
 # Serial number files
 *.txt
 
-# Vault Enterprise license (sensitive)
-vault.hclic
-
 # Environment variables (may contain secrets)
 .env
 

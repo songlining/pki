@@ -2,12 +2,12 @@
 
 This project demonstrates a complete HashiCorp Vault PKI setup with Vault Agent for automatic certificate rotation and process supervision.
 
-The repo defaults to Vault Community Edition, but it can also run in Vault Enterprise mode when an existing local `vault.hclic` file is present.
+The demo runs on Vault Community Edition. No Enterprise features are used.
 
 ## Features
 
 - Vault PKI with root and intermediate certificate authorities
-- Vault Community Edition by default, with optional Vault Enterprise container selection
+- Vault Community Edition in development mode
 - Vault Agent for automatic certificate management
 - Guided audience tracks for live demo, workshop, and operator-focused walkthroughs
 - Demo preflight and safer reset workflow for presenters
@@ -26,8 +26,6 @@ The repo defaults to Vault Community Edition, but it can also run in Vault Enter
 - `jq`
 
 No license file is required.
-
-If you want to use Vault Enterprise for the demo, place an existing license file at `./vault.hclic`.
 
 ## Quick Start
 
@@ -51,16 +49,6 @@ This path starts Vault with the development TLS listener because Vault's `auth/c
 
 For the full step-by-step scenario (what each step shows, what to narrate, and the CI-simulated bootstrap), see [docs/demos.md](docs/demos.md#vault-agent-cert-auth-rotation-demo). For the bootstrap design, see [docs/gitlab-ci-provisioning-design.md](docs/gitlab-ci-provisioning-design.md).
 
-### Enterprise edition setup
-
-```bash
-make setup VAULT_EDITION=enterprise
-make preflight VAULT_EDITION=enterprise
-make live-demo
-```
-
-This uses `docker-compose.enterprise.yml` on top of the default compose file and fails clearly if `./vault.hclic` is missing.
-
 ### Step by step
 
 ```bash
@@ -77,12 +65,6 @@ make workshop-demo
 ./quick-start.sh
 ```
 
-To use Vault Enterprise with the quick start path:
-
-```bash
-VAULT_EDITION=enterprise ./quick-start.sh
-```
-
 After setup, choose the path that matches your audience:
 
 - `make live-demo` - short narrative flow for a live presentation
@@ -95,8 +77,7 @@ After setup, choose the path that matches your audience:
 This setup includes two main containers:
 
 1. `vault`
-   - Vault Community Edition in development mode by default
-   - Optional Vault Enterprise image when `VAULT_EDITION=enterprise`
+   - Vault Community Edition in development mode
    - PKI root and intermediate CAs
    - AppRole authentication for Vault Agent
 
@@ -171,7 +152,6 @@ make clean
 ## Key files
 
 - `docker-compose.yml` - default CE demo environment
-- `docker-compose.enterprise.yml` - Enterprise override for the Vault container and license mount
 - `docker-compose.cert.yml` - TLS/cert-auth override, cert-auth Agent service, and mock OIDC issuer
 - `vault-init.sh` - PKI and AppRole initialization
 - `vault-init-cert.sh` - cert-auth role, host issuance role, host policy, **JWT auth method (`jwt-gitlab`), bootstrap PKI role, and `pki-bootstrap-policy`**
@@ -199,7 +179,6 @@ make clean
 - `agent-demo-diagrams.md` - Mermaid diagrams for the Vault Agent flow and operator/machine split
 - `tls-cert-gen-manual-vs-vault.md` - side-by-side explanation of manual certificate handling versus Vault-based issuance
 - `manual-pki-tls-cert-gen.md` - detailed Mermaid sequence for the traditional CSR-and-ticket flow
-- `GET_TRIAL_LICENSE.md` - legacy note explaining that the repo now runs on Vault CE without a license
 
 ## Useful checks
 

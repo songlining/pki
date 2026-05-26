@@ -292,8 +292,9 @@ cat <<'DIAGRAM'
    (A new accessor proves it's a fresh login, not a token renewal.)
 DIAGRAM
 echo
-echo "Waiting up to 30s for the Agent to rotate its own host certificate..."
-echo "(host.pem ttl=30s, so a rotation should happen within one cycle.)"
+echo "Waiting up to 75s for the Agent to rotate its own host certificate..."
+echo "(host.pem ttl=30s; Vault Agent renews around the 80% mark, but render"
+echo " timing can slip by a cycle, so we allow up to two TTLs.)"
 echo "(Watch host.pem serial AND token accessor - both must change.)"
 echo
 echo "   Before rotation:"
@@ -302,8 +303,8 @@ echo "      token accessor:   ${INITIAL_ACCESSOR}"
 echo
 
 ROTATED=false
-for _ in {1..15}; do
-    sleep 2
+for _ in {1..25}; do
+    sleep 3
     CURRENT_SERIAL="$(cert_serial "$HOST_CERT")"
     CURRENT_ACCESSOR="$(token_accessor)"
     if [ -n "$CURRENT_SERIAL" ] && [ "$CURRENT_SERIAL" != "$INITIAL_SERIAL" ]; then

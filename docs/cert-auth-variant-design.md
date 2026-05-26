@@ -368,7 +368,7 @@ vault-agent-cert:
   command: vault agent -config=/vault/config/agent-cert.hcl
 ```
 
-Decision: **overlay file**, not edit to base. Mirrors the existing enterprise overlay pattern (`docker-compose.enterprise.yml`). `make agent-demo-cert` does `docker compose -f docker-compose.yml -f docker-compose.cert.yml up -d vault-agent-cert`.
+Decision: **overlay file**, not edit to base. Layered compose pattern. `make agent-demo-cert` does `docker compose -f docker-compose.yml -f docker-compose.cert.yml up -d vault-agent-cert`.
 
 ### 6. Makefile targets
 

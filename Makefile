@@ -1,11 +1,6 @@
-.PHONY: help start stop stop-cert stop-default init demo clean setup status agent-demo setup-agent watch-rotation process-demo preflight live-demo workshop-demo operator-demo reset-demo ensure-edition-config setup-cert preflight-cert agent-demo-cert watch-cert-rotation live-demo-cert provision-host provision-host-bad-claim show-bootstrap-cert mock-oidc-logs
+.PHONY: help start stop stop-cert stop-default init demo clean setup status agent-demo setup-agent watch-rotation process-demo preflight live-demo workshop-demo operator-demo reset-demo setup-cert preflight-cert agent-demo-cert watch-cert-rotation live-demo-cert provision-host provision-host-bad-claim show-bootstrap-cert mock-oidc-logs
 
-VAULT_EDITION ?= ce
 COMPOSE_FILES := -f docker-compose.yml
-
-ifeq ($(VAULT_EDITION),enterprise)
-COMPOSE_FILES += -f docker-compose.enterprise.yml
-endif
 
 COMPOSE := docker compose $(COMPOSE_FILES)
 CERT_COMPOSE := docker compose $(COMPOSE_FILES) -f docker-compose.cert.yml
@@ -14,27 +9,19 @@ help: ## Show this help message
 	@echo "HashiCorp Vault PKI Demo"
 	@echo "========================"
 	@echo ""
-	@echo "Default edition: Vault Community Edition"
-	@echo "Enterprise setup: make setup VAULT_EDITION=enterprise"
+	@echo "Edition: Vault Community Edition"
 	@echo ""
 	@echo "Available commands:"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-ensure-edition-config:
-	@if [ "$(VAULT_EDITION)" = "enterprise" ] && [ ! -f ./vault.hclic ]; then \
-		echo "Vault Enterprise requires ./vault.hclic."; \
-		echo "Run with VAULT_EDITION=ce or add the existing local license file."; \
-		exit 1; \
-	fi
-
-start: ensure-edition-config ## Start demo containers (default: CE, override with VAULT_EDITION=enterprise)
-	@echo "Starting Vault $(VAULT_EDITION) demo containers..."
+start: ## Start demo containers
+	@echo "Starting Vault demo containers..."
 	$(COMPOSE) up -d
 	@echo "Container started!"
 
 stop: ## Stop all demo containers, including the cert-auth variant
-	@echo "Stopping all Vault $(VAULT_EDITION) demo containers..."
+	@echo "Stopping all Vault demo containers..."
 	$(CERT_COMPOSE) down --remove-orphans
 	@echo "All demo containers stopped!"
 
@@ -45,7 +32,7 @@ stop-cert: ## Stop only the cert-auth demo overlay containers
 	@echo "Cert-auth containers stopped!"
 
 stop-default: ## Stop only the default demo containers
-	@echo "Stopping default Vault $(VAULT_EDITION) demo containers..."
+	@echo "Stopping default Vault demo containers..."
 	$(COMPOSE) down
 	@echo "Container stopped!"
 
@@ -97,7 +84,7 @@ reset-demo: ## Safely reset known generated demo state
 
 clean: reset-demo ## Alias for safe demo reset
 
-setup: start init setup-agent ## Complete setup (start + init + agent). Use VAULT_EDITION=enterprise for EE.
+setup: start init setup-agent ## Complete setup (start + init + agent).
 	@echo "Setup complete!"
 	@echo "Choose your path:"
 	@echo "  make live-demo"
@@ -107,10 +94,8 @@ setup: start init setup-agent ## Complete setup (start + init + agent). Use VAUL
 	@echo "Or for the cert-auth (TLS client-cert) variant:"
 	@echo "  make setup-cert       # one-time setup of the cert-auth stack"
 	@echo "  make live-demo-cert   # guided cert-auth walkthrough"
-	@echo ""
-	@echo "Current edition: $(VAULT_EDITION)"
 
-setup-cert: ensure-edition-config ## Setup the TLS cert-auth Vault Agent variant (stepped, narrated)
+setup-cert: ## Setup the TLS cert-auth Vault Agent variant (stepped, narrated)
 	@COMPOSE_FILES="$(COMPOSE_FILES) -f docker-compose.cert.yml" \
 		VAULT_ADDR=https://localhost:8200 VAULT_SKIP_VERIFY=true VAULT_TOKEN=myroot \
 		./setup-cert-demo.sh
@@ -135,7 +120,7 @@ agent-demo-cert: preflight-cert ## Run Vault Agent with TLS cert auto-auth and s
 	$(CERT_COMPOSE) up -d --force-recreate vault-agent-cert
 	./agent-cert-demo.sh
 
-status: ## Show status of Vault service (use same VAULT_EDITION value you started with)
+status: ## Show status of Vault service
 	@echo "Service Status:"
 	@echo ""
 	@echo "Docker Container:"
