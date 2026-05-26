@@ -78,8 +78,9 @@ In contrast to the manual process, the Vault workflow shifts the responsibility 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Server as Web Server Process
-    box "Web Server Host" #f9f9f9
+    
+    box "Web Server Host" #e8f4fd
+        participant Server as Web Server Process
         participant Agent as Vault Agent
         participant Files as Cert Files
     end

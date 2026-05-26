@@ -46,6 +46,9 @@ vault-agent-config/role-id
 vault-agent-config/secret-id
 
 vault-agent-output/
+vault-agent-output-cert/
+vault-tls/
 
 # Local git worktrees
 .worktrees/
+.superpowers/

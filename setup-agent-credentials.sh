@@ -12,7 +12,7 @@ vault auth enable approle 2>/dev/null || echo "AppRole already enabled"
 
 echo "2. Creating PKI policy..."
 vault policy write pki-policy - << EOF
-path "pki/issue/example-role" {
+path "pki/issue/app-role" {
   capabilities = ["create", "update"]
 }
 path "auth/token/lookup-self" {

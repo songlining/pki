@@ -20,7 +20,7 @@ flowchart TD
     
     SetupCred --> CheckPKI
     
-    CheckPKI --> RoleExist{example-role<br/>exists?}
+    CheckPKI --> RoleExist{app-role<br/>exists?}
     RoleExist -->|No| CreateRole[Create PKI Role<br/>ttl=30s, max_ttl=72h]
     RoleExist -->|Yes| Demo[Run agent-pki-demo.sh]
     
@@ -158,7 +158,7 @@ sequenceDiagram
     
     loop For each template (cert, key, ca, env)
         Template->>Cache: Get auto-auth token
-        Template->>PKI: Request certificate<br/>pki/issue/example-role<br/>common_name=app.example.com<br/>ttl=30s
+        Template->>PKI: Request certificate<br/>pki/issue/app-role<br/>common_name=app.example.com<br/>ttl=30s
         PKI-->>Template: Return certificate + key + CA
         Template->>Files: Render template to file<br/>(app.crt, app.key, ca.crt, app.env)
     end
@@ -215,7 +215,7 @@ flowchart LR
     EnvTpl --> Parse
     
     Parse --> Execute
-    Execute -->|pki/issue/example-role| PKI
+    Execute -->|pki/issue/app-role| PKI
     
     Certificate --> Render
     PrivateKey --> Render
@@ -331,7 +331,7 @@ graph TD
     subgraph PKI["PKI Resources"]
         PKIPath[pki/*]
         MountPath[sys/mounts/pki]
-        Role[pki/roles/example-role]
+        Role[pki/roles/app-role]
     end
     
     RoleID --> Login
@@ -387,7 +387,7 @@ graph TB
             AgentProxy -->|Writes Files| OutputFiles
         end
         
-        PKIEngine[PKI Secrets Engine<br/>Role: example-role<br/>TTL: 30s]
+        PKIEngine[PKI Secrets Engine<br/>Role: app-role<br/>TTL: 30s]
         
         OutputFiles[app.crt, app.key, ca.crt]
     end
@@ -408,7 +408,7 @@ flowchart TD
     
     Timer -->|Time to renew| GetToken[Get Auto-Auth Token<br/>from cache]
     
-    GetToken --> APICall[API Call:<br/>POST pki/issue/example-role]
+    GetToken --> APICall[API Call:<br/>POST pki/issue/app-role]
     
     APICall --> Params[Parameters:<br/>common_name=app.example.com<br/>ttl=30s]
     
@@ -505,7 +505,7 @@ flowchart TD
     Auto1 --> CreateCred[Create AppRole & credentials]
     CreateCred --> Check4
     
-    Check4 -->|No| Auto2[Auto-create example-role]
+    Check4 -->|No| Auto2[Auto-create app-role]
     Check4 -->|Yes| CheckInit{Vault<br/>initialized?}
     
     Auto2 --> CheckInit

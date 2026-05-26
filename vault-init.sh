@@ -14,12 +14,27 @@ NC='\033[0m' # No Color
 
 # Load environment variables
 if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
+    while IFS='=' read -r key value; do
+        if [ -z "$key" ] || [[ "$key" =~ ^# ]]; then
+            continue
+        fi
+        if [[ ! "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+            continue
+        fi
+        if ! printenv "$key" >/dev/null 2>&1; then
+            export "$key=$value"
+        fi
+    done < .env
 fi
 
 # Vault configuration
 export VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
 export VAULT_TOKEN="${VAULT_TOKEN:-myroot}"
+
+CURL_OPTS=(-s)
+if [ "${VAULT_SKIP_VERIFY:-}" = "true" ]; then
+    CURL_OPTS+=(-k)
+fi
 
 echo -e "${BLUE}HashiCorp Vault PKI Setup${NC}"
 echo "===================================="
@@ -28,7 +43,7 @@ echo "===================================="
 echo -e "${YELLOW}Waiting for Vault to be ready...${NC}"
 timeout=30
 counter=0
-while ! curl -s $VAULT_ADDR/v1/sys/health >/dev/null 2>&1; do
+while ! curl "${CURL_OPTS[@]}" "$VAULT_ADDR/v1/sys/health" >/dev/null 2>&1; do
     if [ $counter -ge $timeout ]; then
         echo -e "${RED}Timeout waiting for Vault to start${NC}"
         echo -e "${YELLOW}Check container logs: docker compose logs vault${NC}"
@@ -91,25 +106,28 @@ vault write pki/root/generate/internal \
     ttl=8760h
 
 # Create PKI role for demo
-echo -e "${YELLOW}Creating PKI role 'example-role'...${NC}"
-vault write pki/roles/example-role \
+echo -e "${YELLOW}Creating PKI role 'app-role'...${NC}"
+vault write pki/roles/app-role \
     allowed_domains="example.com" \
     allow_subdomains=true \
     max_ttl="72h"
 
-# Enable AppRole authentication
-echo -e "${YELLOW}Enabling AppRole authentication...${NC}"
-if vault auth list | grep -q "approle/"; then
-    echo -e "${YELLOW}AppRole auth method already enabled${NC}"
+if [ "${SKIP_APPROLE:-false}" = "true" ]; then
+    echo -e "${YELLOW}Skipping AppRole setup (SKIP_APPROLE=true) \u2014 cert-auth variant does not need it${NC}"
 else
-    vault auth enable approle
-    echo -e "${GREEN}AppRole auth method enabled!${NC}"
-fi
+    # Enable AppRole authentication
+    echo -e "${YELLOW}Enabling AppRole authentication...${NC}"
+    if vault auth list | grep -q "approle/"; then
+        echo -e "${YELLOW}AppRole auth method already enabled${NC}"
+    else
+        vault auth enable approle
+        echo -e "${GREEN}AppRole auth method enabled!${NC}"
+    fi
 
-# Create policy for PKI operations
-echo -e "${YELLOW}Creating PKI policy...${NC}"
-vault policy write pki-policy - <<EOF
-path "pki/issue/example-role" {
+    # Create policy for PKI operations
+    echo -e "${YELLOW}Creating PKI policy...${NC}"
+    vault policy write pki-policy - <<EOF
+path "pki/issue/app-role" {
   capabilities = ["create", "update"]
 }
 path "auth/token/lookup-self" {
@@ -120,13 +138,14 @@ path "auth/token/renew-self" {
 }
 EOF
 
-# Create AppRole for Vault Agent
-echo -e "${YELLOW}Creating AppRole 'vault-agent-role'...${NC}"
-vault write auth/approle/role/vault-agent-role \
-    token_policies="pki-policy" \
-    token_no_default_policy=true \
-    token_ttl=1h \
-    token_max_ttl=4h
+    # Create AppRole for Vault Agent
+    echo -e "${YELLOW}Creating AppRole 'vault-agent-role'...${NC}"
+    vault write auth/approle/role/vault-agent-role \
+        token_policies="pki-policy" \
+        token_no_default_policy=true \
+        token_ttl=1h \
+        token_max_ttl=4h
+fi
 
 echo -e "${GREEN}Vault PKI setup complete!${NC}"
 echo ""

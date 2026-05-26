@@ -1,4 +1,4 @@
-.PHONY: help start stop init demo clean setup status agent-demo setup-agent watch-rotation process-demo preflight live-demo workshop-demo operator-demo reset-demo ensure-edition-config
+.PHONY: help start stop stop-cert stop-default init demo clean setup status agent-demo setup-agent watch-rotation process-demo preflight live-demo workshop-demo operator-demo reset-demo ensure-edition-config setup-cert preflight-cert agent-demo-cert watch-cert-rotation live-demo-cert provision-host provision-host-bad-claim show-bootstrap-cert mock-oidc-logs
 
 VAULT_EDITION ?= ce
 COMPOSE_FILES := -f docker-compose.yml
@@ -8,6 +8,7 @@ COMPOSE_FILES += -f docker-compose.enterprise.yml
 endif
 
 COMPOSE := docker compose $(COMPOSE_FILES)
+CERT_COMPOSE := docker compose $(COMPOSE_FILES) -f docker-compose.cert.yml
 
 help: ## Show this help message
 	@echo "HashiCorp Vault PKI Demo"
@@ -32,8 +33,19 @@ start: ensure-edition-config ## Start demo containers (default: CE, override wit
 	$(COMPOSE) up -d
 	@echo "Container started!"
 
-stop: ## Stop demo containers (use same VAULT_EDITION value you started with)
-	@echo "Stopping Vault $(VAULT_EDITION) demo containers..."
+stop: ## Stop all demo containers, including the cert-auth variant
+	@echo "Stopping all Vault $(VAULT_EDITION) demo containers..."
+	$(CERT_COMPOSE) down --remove-orphans
+	@echo "All demo containers stopped!"
+
+stop-cert: ## Stop only the cert-auth demo overlay containers
+	@echo "Stopping cert-auth demo containers..."
+	$(CERT_COMPOSE) stop vault-agent-cert
+	$(CERT_COMPOSE) rm -f vault-agent-cert
+	@echo "Cert-auth containers stopped!"
+
+stop-default: ## Stop only the default demo containers
+	@echo "Stopping default Vault $(VAULT_EDITION) demo containers..."
 	$(COMPOSE) down
 	@echo "Container stopped!"
 
@@ -57,8 +69,13 @@ setup-agent: ## Setup Vault Agent credentials
 preflight: ## Check whether the demo is ready to present
 	./demo-preflight.sh
 
+preflight-cert: ## Check whether the cert-auth demo variant is ready
+	./demo-preflight.sh cert
+
 live-demo: preflight ## Guided entrypoint for a short live presentation
 	./demo-paths.sh live --launch
+
+live-demo-cert: preflight-cert agent-demo-cert ## Guided entrypoint for the cert-auth presentation path
 
 workshop-demo: preflight ## Guided entrypoint for a hands-on workshop path
 	./demo-paths.sh workshop
@@ -69,6 +86,10 @@ operator-demo: preflight ## Guided entrypoint for the operator and automation pa
 watch-rotation: ## Watch certificate rotation in real-time
 	@echo "Starting certificate rotation monitor..."
 	./watch-rotation.sh
+
+watch-cert-rotation: preflight-cert ## Watch the agent's own cert-auth credential rotate
+	@echo "Starting cert-auth credential rotation monitor..."
+	./watch-cert-rotation.sh
 
 reset-demo: ## Safely reset known generated demo state
 	@echo "Resetting known demo state..."
@@ -83,7 +104,36 @@ setup: start init setup-agent ## Complete setup (start + init + agent). Use VAUL
 	@echo "  make workshop-demo"
 	@echo "  make operator-demo"
 	@echo ""
+	@echo "Or for the cert-auth (TLS client-cert) variant:"
+	@echo "  make setup-cert       # one-time setup of the cert-auth stack"
+	@echo "  make live-demo-cert   # guided cert-auth walkthrough"
+	@echo ""
 	@echo "Current edition: $(VAULT_EDITION)"
+
+setup-cert: ensure-edition-config ## Setup the TLS cert-auth Vault Agent variant (stepped, narrated)
+	@COMPOSE_FILES="$(COMPOSE_FILES) -f docker-compose.cert.yml" \
+		VAULT_ADDR=https://localhost:8200 VAULT_SKIP_VERIFY=true VAULT_TOKEN=myroot \
+		./setup-cert-demo.sh
+
+provision-host: ## Re-run the simulated GitLab CI bootstrap to mint a fresh host.pem
+	VAULT_ADDR=https://localhost:8200 VAULT_SKIP_VERIFY=true ./simulate-ci-bootstrap.sh
+
+provision-host-bad-claim: ## Negative test: prove a wrong-project JWT gets rejected
+	VAULT_ADDR=https://localhost:8200 VAULT_SKIP_VERIFY=true ./simulate-ci-bootstrap-bad.sh
+
+show-bootstrap-cert: ## Inspect the current bootstrap host certificate
+	@if [ ! -s vault-agent-config/host.pem ]; then \
+		echo "vault-agent-config/host.pem not found. Run 'make provision-host'."; exit 1; \
+	fi
+	@openssl x509 -in vault-agent-config/host.pem -noout -subject -serial -dates
+
+mock-oidc-logs: ## Tail the mock OIDC issuer's logs
+	$(CERT_COMPOSE) logs -f mock-oidc
+
+agent-demo-cert: preflight-cert ## Run Vault Agent with TLS cert auto-auth and self-rotation
+	@echo "Starting cert-auth Vault Agent..."
+	$(CERT_COMPOSE) up -d --force-recreate vault-agent-cert
+	./agent-cert-demo.sh
 
 status: ## Show status of Vault service (use same VAULT_EDITION value you started with)
 	@echo "Service Status:"

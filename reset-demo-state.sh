@@ -20,7 +20,15 @@ for artifact in \
     vault-agent-output/app.key \
     vault-agent-output/ca.crt \
     vault-agent-output/app.env \
-    vault-agent-output/myapp.log; do
+    vault-agent-output/myapp.log \
+    vault-agent-output-cert/app.crt \
+    vault-agent-output-cert/app.key \
+    vault-agent-output-cert/ca.crt \
+    vault-agent-output-cert/app.env \
+    vault-agent-output-cert/myapp.log \
+    vault-agent-config/host.pem \
+    vault-agent-config/pki-ca.crt \
+    mock-oidc/keys/signing-key.pem; do
     if [ -e "$artifact" ]; then
         rm -f "$artifact"
         echo "Removed $artifact"
@@ -28,7 +36,7 @@ for artifact in \
 done
 
 echo "Stopping demo containers without deleting volumes..."
-docker compose down >/dev/null 2>&1 || true
+docker compose -f docker-compose.yml -f docker-compose.cert.yml down >/dev/null 2>&1 || true
 
 echo
 echo "Reset complete."

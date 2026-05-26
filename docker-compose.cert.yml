@@ -1,0 +1,40 @@
+services:
+  vault:
+    environment:
+      VAULT_ADDR: "https://localhost:8200"
+      VAULT_API_ADDR: "https://localhost:8200"
+    volumes:
+      - ./vault-tls:/vault/tls
+    command: vault server -dev -dev-tls -dev-tls-cert-dir=/vault/tls -dev-root-token-id="${VAULT_DEV_ROOT_TOKEN_ID}" -dev-listen-address="0.0.0.0:8200"
+
+  vault-agent-cert:
+    image: hashicorp/vault:1.21.4
+    container_name: vault-agent-cert
+    depends_on:
+      - vault
+    volumes:
+      - ./vault-agent-config:/vault/config
+      - ./vault-agent-output-cert:/vault/agent
+      - ./vault-tls:/vault/tls:ro
+    ports:
+      - "8101:8101"
+    networks:
+      - vault-network
+    command: vault agent -config=/vault/config/agent-cert.hcl
+
+  mock-oidc:
+    build: ./mock-oidc
+    container_name: mock-oidc
+    environment:
+      ISSUER_URL: "http://mock-oidc:8080"
+    volumes:
+      - ./mock-oidc/keys:/app/keys
+    ports:
+      - "8080:8080"
+    networks:
+      - vault-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
