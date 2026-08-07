@@ -43,7 +43,10 @@ echo -n "$ROLE_ID" > vault-agent-config/role-id
 echo -n "$SECRET_ID" > vault-agent-config/secret-id
 
 echo "7. Setting proper permissions..."
-chmod 600 vault-agent-config/role-id vault-agent-config/secret-id
+# 0644 (not 0600): under Podman Desktop's macOS VM (libkrun virtiofs), bind-mounted
+# files keep the host uid and the container may not bypass DAC for them; the Vault
+# Agent container must be able to read these at boot. Demo credentials only.
+chmod 644 vault-agent-config/role-id vault-agent-config/secret-id
 
 echo "Vault Agent credentials configured successfully!"
 echo "Files created:"

@@ -5,6 +5,9 @@
 
 set -e
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -46,7 +49,7 @@ counter=0
 while ! curl "${CURL_OPTS[@]}" "$VAULT_ADDR/v1/sys/health" >/dev/null 2>&1; do
     if [ $counter -ge $timeout ]; then
         echo -e "${RED}Timeout waiting for Vault to start${NC}"
-        echo -e "${YELLOW}Check container logs: docker compose logs vault${NC}"
+        echo -e "${YELLOW}Check container logs: ${COMPOSE} logs vault${NC}"
         exit 1
     fi
     echo "Waiting for Vault server... ($((counter + 1))/$timeout)"
@@ -62,8 +65,8 @@ echo -e "${YELLOW}Checking Vault versions...${NC}"
 LOCAL_VAULT_VERSION=$(vault version | head -1)
 echo -e "${BLUE}Local Vault CLI: ${LOCAL_VAULT_VERSION}${NC}"
 
-if docker ps --format '{{.Names}}' | grep -qx vault; then
-    SERVER_VAULT_VERSION=$(docker exec vault vault version | head -1)
+if "$CONTAINER_ENGINE" ps --format '{{.Names}}' | grep -qx vault; then
+    SERVER_VAULT_VERSION=$("$CONTAINER_ENGINE" exec vault vault version | head -1)
     echo -e "${BLUE}Vault server container: ${SERVER_VAULT_VERSION}${NC}"
 fi
 

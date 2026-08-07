@@ -9,6 +9,9 @@
 
 set -euo pipefail
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -26,7 +29,7 @@ AUDIENCE="${AUDIENCE:-vault-pki-bootstrap}"
 HOST_COMMON_NAME="${HOST_COMMON_NAME:-host-01.trading.demo.internal}"
 HOST_TTL="${HOST_TTL:-24h}"
 
-# From the host (outside the docker network) the mock OIDC and Vault listen on
+# From the host (outside the container network) the mock OIDC and Vault listen on
 # their published ports. Inside the network they'd be mock-oidc:8080 / vault:8200.
 MOCK_OIDC_URL="${MOCK_OIDC_URL:-http://localhost:8080}"
 export VAULT_ADDR="${VAULT_ADDR:-https://localhost:8200}"
@@ -128,9 +131,9 @@ if [ "$HTTP_CODE" != "200" ]; then
     jq . "$LOGIN_JSON" 2>/dev/null || cat "$LOGIN_JSON"
     echo
     echo -e "${YELLOW}Tail of the Vault audit log (last 5 entries):${NC}"
-    docker exec vault sh -c 'tail -n 5 /vault/logs/audit.log' 2>/dev/null | \
+    "$CONTAINER_ENGINE" exec vault sh -c 'tail -n 5 /vault/logs/audit.log' 2>/dev/null | \
         jq -c '{type, request:{path:.request.path, remote_address:.request.remote_address}, response:{mount_type:.response.mount_type}, error}' 2>/dev/null \
-        || docker exec vault sh -c 'tail -n 5 /vault/logs/audit.log' 2>/dev/null \
+        || "$CONTAINER_ENGINE" exec vault sh -c 'tail -n 5 /vault/logs/audit.log' 2>/dev/null \
         || echo "  (audit log unavailable)"
     exit 1
 fi
@@ -166,7 +169,7 @@ fi
 } > "$HOST_PEM_TMP"
 jq -r .data.issuing_ca "$ISSUE_JSON" > "$HOST_CA_TMP"
 
-chmod 600 "$HOST_PEM_TMP"
+chmod 644 "$HOST_PEM_TMP"
 chmod 644 "$HOST_CA_TMP"
 mv "$HOST_PEM_TMP" "$HOST_PEM"
 mv "$HOST_CA_TMP" "$HOST_CA"

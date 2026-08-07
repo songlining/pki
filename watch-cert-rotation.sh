@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 HOST_CERT="vault-agent-config/host.pem"
 START_EPOCH="$(date +%s)"
 LAST_SERIAL=""
@@ -13,7 +16,7 @@ export VAULT_SKIP_VERIFY="${VAULT_SKIP_VERIFY:-true}"
 
 token_accessor() {
     local token
-    token="$(docker exec vault-agent-cert cat /tmp/vault-token-cert 2>/dev/null || true)"
+    token="$("$CONTAINER_ENGINE" exec vault-agent-cert cat /tmp/vault-token-cert 2>/dev/null || true)"
     if [ -z "$token" ]; then
         echo ""
         return

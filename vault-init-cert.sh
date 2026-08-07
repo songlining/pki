@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -132,7 +135,7 @@ fi
 echo -e "${YELLOW}Waiting for mock-oidc to publish JWKS...${NC}"
 OIDC_READY=false
 for _ in $(seq 1 30); do
-    if docker exec vault wget -qO- http://mock-oidc:8080/.well-known/jwks.json 2>/dev/null \
+    if "$CONTAINER_ENGINE" exec vault wget -qO- http://mock-oidc:8080/.well-known/jwks.json 2>/dev/null \
         | grep -q '"keys"'; then
         OIDC_READY=true
         break

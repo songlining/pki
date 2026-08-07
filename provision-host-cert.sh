@@ -37,7 +37,7 @@ vault write -format=json pki/issue/host-role \
 } > "$HOST_PEM_TMP"
 jq -r .data.issuing_ca "$ISSUE_JSON" > "$HOST_CA_TMP"
 
-chmod 600 "$HOST_PEM_TMP"
+chmod 644 "$HOST_PEM_TMP"
 chmod 644 "$HOST_CA_TMP"
 mv "$HOST_PEM_TMP" "$HOST_PEM"
 mv "$HOST_CA_TMP" "$HOST_CA"

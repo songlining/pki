@@ -5,6 +5,9 @@
 
 set -e
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -51,12 +54,12 @@ wait_for_user() {
 check_services() {
     print_step "Checking Vault and Vault Agent status..."
     
-    if ! docker ps --format '{{.Names}}' | grep -qx vault; then
+    if ! "$CONTAINER_ENGINE" ps --format '{{.Names}}' | grep -qx vault; then
         print_error "Vault is not running!"
         exit 1
     fi
     
-    if ! docker ps | grep -q vault-agent; then
+    if ! "$CONTAINER_ENGINE" ps | grep -q vault-agent; then
         print_error "Vault Agent is not running!"
         exit 1
     fi
@@ -100,12 +103,12 @@ setup_agent_credentials() {
     if [ ! -f "vault-agent-config/secret-id" ] || [ ! -s "vault-agent-config/secret-id" ]; then
         print_important "Secret-id missing or empty, regenerating..."
         vault write -force -field=secret_id auth/approle/role/vault-agent-role/secret-id > vault-agent-config/secret-id
-        chmod 600 vault-agent-config/secret-id
+        chmod 644 vault-agent-config/secret-id
         print_success "New secret-id generated"
         
         # Restart Vault Agent to pick up new credentials
         print_step "Restarting Vault Agent with new credentials..."
-        docker restart vault-agent >/dev/null
+        "$CONTAINER_ENGINE" restart vault-agent >/dev/null
         sleep 3
     else
         print_success "Agent credentials exist"
@@ -128,7 +131,7 @@ show_current_cert() {
 # Function to show vault agent logs
 show_agent_logs() {
     print_step "Recent Vault Agent activity:"
-    docker logs vault-agent --tail 10 | grep -E "(rendered|executing|spawning|starting|Application running)" | tail -5
+    "$CONTAINER_ENGINE" logs vault-agent --tail 10 | grep -E "(rendered|executing|spawning|starting|Application running)" | tail -5
 }
 
 filter_live_monitor_output() {
@@ -157,7 +160,7 @@ filter_live_monitor_output() {
 
 show_current_startup_context() {
     print_step "Current startup context:"
-    docker exec vault-agent sh -c 'if [ -f /tmp/myapp.log ]; then tail -n 200 /tmp/myapp.log; fi' | \
+    "$CONTAINER_ENGINE" exec vault-agent sh -c 'if [ -f /tmp/myapp.log ]; then tail -n 200 /tmp/myapp.log; fi' | \
         perl -ne '
             BEGIN { $| = 1 }
             $visible = $_;
@@ -240,7 +243,7 @@ main() {
     echo -e "\n${PURPLE}Starting live log monitoring... (Press Ctrl+C to stop)${NC}\n"
     
     # Follow the app log written by restart-app.sh inside the container.
-    docker exec vault-agent sh -c 'touch /tmp/myapp.log && exec tail -n 0 -f /tmp/myapp.log' | \
+    "$CONTAINER_ENGINE" exec vault-agent sh -c 'touch /tmp/myapp.log && exec tail -n 0 -f /tmp/myapp.log' | \
         filter_live_monitor_output &
     LOG_PID=$!
     

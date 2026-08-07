@@ -6,6 +6,9 @@
 
 set -euo pipefail
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -18,7 +21,7 @@ export VAULT_TOKEN="${VAULT_TOKEN:-myroot}"
 export VAULT_SKIP_VERIFY="${VAULT_SKIP_VERIFY:-true}"
 
 COMPOSE_FILES="${COMPOSE_FILES:--f docker-compose.yml -f docker-compose.cert.yml}"
-COMPOSE="docker compose ${COMPOSE_FILES}"
+COMPOSE_CMD="${COMPOSE} ${COMPOSE_FILES}"
 
 # Allow non-interactive runs (CI / automated rebuilds): SETUP_CERT_INTERACTIVE=false
 INTERACTIVE="${SETUP_CERT_INTERACTIVE:-true}"
@@ -138,9 +141,12 @@ echo "mock-oidc plays the role of GitLab's OIDC issuer. It signs the JWT that"
 echo "the simulated CI job will hand to Vault in Step 4."
 echo
 echo -e "${YELLOW}What runs:${NC}"
-show_cmd "${COMPOSE} up -d --build vault mock-oidc"
+show_cmd "${COMPOSE_CMD} up -d --build vault mock-oidc"
 echo
-run_cmd "${COMPOSE} up -d --build vault mock-oidc"
+# Ensure bind-mount dirs (vault-tls, outputs) are writable by the container
+# users (vault uid 100) under Podman Desktop's ownership-strict virtiofs.
+demo_ensure_dirs
+run_cmd "${COMPOSE_CMD} up -d --build vault mock-oidc"
 wait_for_user
 
 # ─────────────────────────────────────────────────────────────────────────────

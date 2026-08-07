@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 echo "=== Safe Demo Reset ==="
 echo "Removing known generated demo artifacts without broad wildcard deletion."
 
@@ -36,7 +39,10 @@ for artifact in \
 done
 
 echo "Stopping demo containers without deleting volumes..."
-docker compose -f docker-compose.yml -f docker-compose.cert.yml down >/dev/null 2>&1 || true
+"$CONTAINER_ENGINE" compose -f docker-compose.yml -f docker-compose.cert.yml down >/dev/null 2>&1 || true
+
+# Re-create the bind-mount output dirs with container-writable permissions.
+demo_ensure_dirs
 
 echo
 echo "Reset complete."

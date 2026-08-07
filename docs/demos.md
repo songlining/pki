@@ -109,7 +109,7 @@ make watch-cert-rotation   # optional, in another terminal
 sequenceDiagram
     autonumber
     participant Op as Operator
-    participant Compose as docker compose
+    participant Compose as podman compose
     participant Vault
     participant OIDC as mock-oidc
     participant CI as simulate-ci-bootstrap.sh<br/>(pretends to be GitLab Runner)
@@ -163,7 +163,7 @@ sequenceDiagram
     Vault-->>Agent: new token (new accessor = proof)
 
     Note over Agent,App: Step 5 — Restart survivability
-    Op->>Agent: docker restart vault-agent-cert
+    Op->>Agent: podman restart vault-agent-cert
     Agent->>Bundle: read host.pem from disk
     Agent->>Vault: auth/cert/login (no operator intervention)
     Vault-->>Agent: token
@@ -194,7 +194,7 @@ This path starts Vault with the development TLS listener because Vault's `auth/c
 2. **Bootstrap host certificate** — show the `host-role` PKI role, re-run [`provision-host-cert.sh`](../provision-host-cert.sh) with a 60s TTL so rotation is visible within the demo window, restart `vault-agent-cert`, then inspect the issued `host.pem` (serial + token accessor captured as `INITIAL_*`).
 3. **Self-rotation template** — show [host-bundle.tpl](../vault-agent-config/host-bundle.tpl) and the `template` stanza in `agent-cert.hcl`; narrate the 4-stage rotation (template renders new cert/key → Agent writes bundle → `reload_period` picks it up → Agent re-authenticates).
 4. **Watch rotation** — poll for ~90s; on rotation the script prints the new serial and the new token accessor, proving the Agent re-issued its own host credential and re-authenticated.
-5. **Restart survivability** — `docker restart vault-agent-cert`, then verify the new accessor proves the Agent re-authenticated from the on-disk bundle without operator intervention.
+5. **Restart survivability** — `podman restart vault-agent-cert` (or `docker` if the engine fallback is active), then verify the new accessor proves the Agent re-authenticated from the on-disk bundle without operator intervention.
 
 ### Bootstrap (CI simulation)
 

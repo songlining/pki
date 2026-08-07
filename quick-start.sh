@@ -4,6 +4,9 @@
 
 set -e
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 COMPOSE_FILES="-f docker-compose.yml"
 
 # Colors
@@ -20,17 +23,18 @@ echo ""
 
 # Stop any running containers without deleting local volumes
 echo -e "${YELLOW}Stopping existing containers...${NC}"
-docker compose $COMPOSE_FILES down >/dev/null 2>&1 || true
+"$CONTAINER_ENGINE" compose $COMPOSE_FILES down >/dev/null 2>&1 || true
 
 echo -e "${YELLOW}Starting Vault and Vault Agent containers...${NC}"
-docker compose $COMPOSE_FILES up -d
+demo_ensure_dirs
+"$CONTAINER_ENGINE" compose $COMPOSE_FILES up -d
 
 echo -e "${YELLOW}Initializing PKI and AppRole...${NC}"
 ./vault-init.sh
 
 echo -e "${YELLOW}Refreshing Vault Agent bootstrap credentials...${NC}"
 ./setup-agent-credentials.sh
-docker restart vault-agent >/dev/null
+"$CONTAINER_ENGINE" restart vault-agent >/dev/null
 
 echo -e "${YELLOW}Running demo preflight...${NC}"
 ./demo-preflight.sh

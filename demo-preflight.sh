@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 STATUS=0
 MODE="${1:-default}"
 
@@ -26,6 +29,12 @@ check_command() {
     fi
 }
 
+# Engine-agnostic “is this named container currently running?” check.
+container_running() {
+    local name="$1"
+    "$CONTAINER_ENGINE" ps --filter "name=^${name}$" --filter status=running -q | grep -q .
+}
+
 if [ "$MODE" = "cert" ]; then
     echo "=== Vault Cert-auth PKI Demo Preflight ==="
 else
@@ -34,22 +43,17 @@ fi
 echo "Checking whether the demo environment is ready to present."
 echo
 
-for cmd in docker vault openssl jq curl; do
+for cmd in "$CONTAINER_ENGINE" vault openssl jq curl; do
     check_command "$cmd"
 done
 
-if docker compose version >/dev/null 2>&1; then
-    ok "docker compose is available"
+if "$CONTAINER_ENGINE" compose version >/dev/null 2>&1; then
+    ok "$CONTAINER_ENGINE compose is available"
 else
-    fail "docker compose is not available"
+    fail "$CONTAINER_ENGINE compose is not available (install podman-compose, or Docker Desktop for the fallback)"
 fi
 
-COMPOSE_FILES=(-f docker-compose.yml)
-if [ "$MODE" = "cert" ]; then
-    COMPOSE_FILES+=(-f docker-compose.cert.yml)
-fi
-
-if docker compose "${COMPOSE_FILES[@]}" ps --status running --services 2>/dev/null | grep -qx "vault"; then
+if container_running vault; then
     ok "Vault container is running"
 else
     if [ "$MODE" = "cert" ]; then
@@ -60,12 +64,12 @@ else
 fi
 
 if [ "$MODE" = "cert" ]; then
-    if docker compose "${COMPOSE_FILES[@]}" ps --status running --services 2>/dev/null | grep -qx "vault-agent-cert"; then
+    if container_running vault-agent-cert; then
         ok "Cert-auth Vault Agent container is running"
     else
         warn "Cert-auth Vault Agent container is not running yet"
     fi
-elif docker compose "${COMPOSE_FILES[@]}" ps --status running --services 2>/dev/null | grep -qx "vault-agent"; then
+elif container_running vault-agent; then
     ok "Vault Agent container is running"
 else
     warn "Vault Agent container is not running yet"
@@ -95,7 +99,7 @@ if [ "$STATUS" -eq 0 ]; then
     export VAULT_TOKEN=myroot
 
     LOCAL_VAULT_VERSION=$(vault version 2>/dev/null | head -1 || true)
-    SERVER_VAULT_VERSION=$(docker exec vault vault version 2>/dev/null | head -1 || true)
+    SERVER_VAULT_VERSION=$("$CONTAINER_ENGINE" exec vault vault version 2>/dev/null | head -1 || true)
 
     if [ -n "$LOCAL_VAULT_VERSION" ]; then
         echo "INFO: Local Vault CLI: $LOCAL_VAULT_VERSION"
@@ -147,15 +151,15 @@ if [ "$STATUS" -eq 0 ]; then
             fail "Policy 'pki-bootstrap-policy' is missing. Run 'make setup-cert'."
         fi
 
-        if docker compose "${COMPOSE_FILES[@]}" ps --status running --services 2>/dev/null | grep -qx "mock-oidc"; then
+        if container_running mock-oidc; then
             ok "mock-oidc container is running"
             if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
                 ok "mock-oidc is responding on http://localhost:8080"
             else
                 fail "mock-oidc is not responding on http://localhost:8080"
             fi
-            if docker exec vault wget -qO- http://mock-oidc:8080/.well-known/jwks.json 2>/dev/null | grep -q '"keys"'; then
-                ok "Vault can reach mock-oidc JWKS over the docker network"
+            if "$CONTAINER_ENGINE" exec vault wget -qO- http://mock-oidc:8080/.well-known/jwks.json 2>/dev/null | grep -q '"keys"'; then
+                ok "Vault can reach mock-oidc JWKS over the container network"
             else
                 fail "Vault cannot reach mock-oidc JWKS. Check the vault-network."
             fi
@@ -196,14 +200,14 @@ if [ "$STATUS" -eq 0 ]; then
             fail "Initial host certificate files are missing. Run 'make setup-cert'."
         fi
 
-        if docker compose "${COMPOSE_FILES[@]}" ps --status running --services 2>/dev/null | grep -qx "vault-agent-cert"; then
-            if docker exec vault-agent-cert test -s /tmp/vault-token-cert; then
+        if container_running vault-agent-cert; then
+            if "$CONTAINER_ENGINE" exec vault-agent-cert test -s /tmp/vault-token-cert; then
                 ok "Cert-auth Vault Agent already has an authenticated token"
             else
                 warn "Cert-auth Vault Agent token file is missing or empty"
             fi
 
-            if docker exec vault-agent-cert sh -c 'test -s /vault/agent/app.crt && test -s /vault/agent/app.key && test -s /vault/agent/ca.crt' >/dev/null 2>&1; then
+            if "$CONTAINER_ENGINE" exec vault-agent-cert sh -c 'test -s /vault/agent/app.crt && test -s /vault/agent/app.key && test -s /vault/agent/ca.crt' >/dev/null 2>&1; then
                 ok "Cert-auth Vault Agent has rendered application certificate, key, and CA files"
             else
                 warn "Cert-auth Vault Agent has not rendered all application output files yet"
@@ -227,14 +231,14 @@ if [ "$STATUS" -eq 0 ]; then
         warn "Vault Agent issuance role 'app-role' is missing. 'make agent-demo' will create it."
     fi
 
-    if [ "$MODE" != "cert" ] && docker compose "${COMPOSE_FILES[@]}" ps --status running --services 2>/dev/null | grep -qx "vault-agent"; then
-        if docker exec vault-agent test -s /tmp/vault-token; then
+    if [ "$MODE" != "cert" ] && container_running vault-agent; then
+        if "$CONTAINER_ENGINE" exec vault-agent test -s /tmp/vault-token; then
             ok "Vault Agent already has an authenticated token"
         else
             warn "Vault Agent token file is missing or empty"
         fi
 
-        if docker exec vault-agent sh -c 'test -s /vault/agent/app.crt && test -s /vault/agent/app.key && test -s /vault/agent/ca.crt' >/dev/null 2>&1; then
+        if "$CONTAINER_ENGINE" exec vault-agent sh -c 'test -s /vault/agent/app.crt && test -s /vault/agent/app.key && test -s /vault/agent/ca.crt' >/dev/null 2>&1; then
             ok "Vault Agent has rendered certificate, key, and CA files"
         else
             warn "Vault Agent has not rendered all output files yet"

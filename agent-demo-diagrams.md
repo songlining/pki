@@ -63,7 +63,7 @@ graph TB
         Scripts --> Config
     end
     
-    subgraph Docker["Docker Network: vault-network"]
+    subgraph Docker["Container Network: vault-network"]
         subgraph VaultServer["vault container"]
             VaultDev[Vault Server<br/>:8200<br/>Dev Mode]
             PKIEngine[PKI Secrets Engine]
@@ -458,7 +458,7 @@ C4Context
         Container(setupscript, "setup-agent-credentials.sh", "Bash", "Credential setup")
     }
     
-    System_Boundary(docker, "Docker Environment") {
+    System_Boundary(container, "Container Environment") {
         Container(vault, "Vault Server", "Vault CE", "PKI engine, AppRole auth")
         Container(agent, "Vault Agent", "OSS", "Auto-auth, templating, caching")
     }

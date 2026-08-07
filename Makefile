@@ -1,9 +1,16 @@
 .PHONY: help start stop stop-cert stop-default init demo clean setup status agent-demo setup-agent watch-rotation process-demo preflight live-demo workshop-demo operator-demo reset-demo setup-cert preflight-cert agent-demo-cert watch-cert-rotation live-demo-cert provision-host provision-host-bad-claim show-bootstrap-cert mock-oidc-logs
 
+# Container engine: Podman Desktop (podman) by default, Docker as fallback.
+CONTAINER_ENGINE ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
+
+# podman prints an "executing external compose provider" banner on stderr;
+# silence it so demo output stays clean. Empty under Docker (no-op).
+COMPOSE_QUIET := $(shell [ "$(CONTAINER_ENGINE)" = podman ] && printf 'PODMAN_COMPOSE_WARNING_LOGS=false ')
+
 COMPOSE_FILES := -f docker-compose.yml
 
-COMPOSE := docker compose $(COMPOSE_FILES)
-CERT_COMPOSE := docker compose $(COMPOSE_FILES) -f docker-compose.cert.yml
+COMPOSE := $(COMPOSE_QUIET)$(CONTAINER_ENGINE) compose $(COMPOSE_FILES)
+CERT_COMPOSE := $(COMPOSE_QUIET)$(CONTAINER_ENGINE) compose $(COMPOSE_FILES) -f docker-compose.cert.yml
 
 help: ## Show this help message
 	@echo "HashiCorp Vault PKI Demo"
@@ -17,6 +24,7 @@ help: ## Show this help message
 
 start: ## Start demo containers
 	@echo "Starting Vault demo containers..."
+	@mkdir -p vault-agent-config vault-agent-output vault-agent-output-cert vault-tls && chmod 777 vault-agent-config vault-agent-output vault-agent-output-cert vault-tls
 	$(COMPOSE) up -d
 	@echo "Container started!"
 
@@ -117,13 +125,14 @@ mock-oidc-logs: ## Tail the mock OIDC issuer's logs
 
 agent-demo-cert: preflight-cert ## Run Vault Agent with TLS cert auto-auth and self-rotation
 	@echo "Starting cert-auth Vault Agent..."
+	@mkdir -p vault-agent-config vault-agent-output-cert && chmod 777 vault-agent-config vault-agent-output-cert
 	$(CERT_COMPOSE) up -d --force-recreate vault-agent-cert
 	./agent-cert-demo.sh
 
 status: ## Show status of Vault service
 	@echo "Service Status:"
 	@echo ""
-	@echo "Docker Container:"
+	@echo "$(CONTAINER_ENGINE) Container:"
 	$(COMPOSE) ps
 	@echo ""
 	@echo "Vault Status:"

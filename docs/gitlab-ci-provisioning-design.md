@@ -130,7 +130,7 @@ def mint_token():
     return {"token": sign_jwt(claims)}
 ```
 
-Issuer URL: `http://mock-oidc:8080` (within the docker network).
+Issuer URL: `http://mock-oidc:8080` (within the container network).
 
 ### 2. Vault JWT auth setup (extend `vault-init-cert.sh`)
 
@@ -231,9 +231,9 @@ chmod 600 vault-agent-config/host.key
 echo "==> [CI] Done. Agent can now bootstrap."
 ```
 
-Runs from the host (uses local `vault` CLI + `curl`). Talks to `mock-oidc:8080` and `vault:8200` via the docker network from outside — that means either:
+Runs from the host (uses local `vault` CLI + `curl`). Talks to `mock-oidc:8080` and `vault:8200` via the container network from outside — that means either:
 - Port-forward `mock-oidc` (e.g. `8080:8080`) and `vault` (already `8200:8200`), use `http://localhost:8080` from host, OR
-- Run the script **inside** a container on the same docker network.
+- Run the script **inside** a container on the same container network.
 
 **Decision: port-forward + run from host.** Simpler narration ("here's the script we'd put in `.gitlab-ci.yml`"), no extra container, matches how Larry will demo it live.
 
@@ -260,12 +260,12 @@ vault write auth/jwt-gitlab/login role=gitlab-host-bootstrap jwt="$JWT" || true
 
 echo ""
 echo "==> Vault audit log entry for this attempt:"
-docker exec vault tail -5 /vault/logs/audit.log | jq 'select(.response.error != null)'
+podman exec vault tail -5 /vault/logs/audit.log | jq 'select(.response.error != null)'
 ```
 
 Vault will refuse the login with a bound_claims mismatch. The audit log entry is the teaching moment — *"This is what your SIEM sees. Any pipeline trying to mint a bootstrap cert from outside the acme/trading-platform project shows up here."*
 
-### 5. Docker compose addition (extend `docker-compose.cert.yml`)
+### 5. Compose overlay addition (extend `docker-compose.cert.yml`)
 
 Add the mock OIDC service alongside `vault-agent-cert`:
 
@@ -282,7 +282,7 @@ mock-oidc:
     - ./mock-oidc/keys:/app/keys
 ```
 
-Note: `ISSUER_URL=http://mock-oidc:8080` (the docker-internal hostname) because **Vault must be able to fetch JWKS from that URL**, and Vault is on the same docker network. The host-side script uses `http://localhost:8080` for the same service.
+Note: `ISSUER_URL=http://mock-oidc:8080` (the container-internal hostname) because **Vault must be able to fetch JWKS from that URL**, and Vault is on the same container network. The host-side script uses `http://localhost:8080` for the same service.
 
 This means JWTs are signed with `iss=http://mock-oidc:8080` and Vault is configured to expect `bound_issuer=http://mock-oidc:8080`. Both Vault and the OIDC mock agree. The host-side `curl` doesn't care about `iss` — it just needs to reach the OIDC endpoint to fetch a token.
 
@@ -364,8 +364,8 @@ sequenceDiagram
 | # | Risk | Likelihood | Mitigation |
 |---|---|---|---|
 | 1 | Mock OIDC issuer URL mismatch between Vault config (`mock-oidc:8080` internal) and JWT `iss` claim (also `mock-oidc:8080`) — easy to forget | High | Pin `ISSUER_URL` env var into mock + Vault config; both reference the same value via env |
-| 2 | Vault can't reach `mock-oidc:8080` for JWKS fetch (network/DNS) | Medium | Same docker network; confirm with `docker exec vault wget -O- mock-oidc:8080/.well-known/jwks.json` during preflight |
-| 3 | Clock skew between containers makes JWT `iat`/`exp` invalid | Low | All containers share host clock via docker default; allow `clock_skew_leeway` in Vault JWT role config (e.g. 60s) |
+| 2 | Vault can't reach `mock-oidc:8080` for JWKS fetch (network/DNS) | Medium | Same container network; confirm with `podman exec vault wget -O- mock-oidc:8080/.well-known/jwks.json` during preflight |
+| 3 | Clock skew between containers makes JWT `iat`/`exp` invalid | Low | All containers share host clock via the container engine default; allow `clock_skew_leeway` in Vault JWT role config (e.g. 60s) |
 | 4 | JWKS public key changes when mock-oidc container restarts → Vault cache stale | Medium | Persist `mock-oidc/keys/` to a volume; key is generated once and reused. Document `make reset-oidc-keys` for the rare case we want fresh keys |
 | 5 | Audience mismatch — `aud` in JWT vs `bound_audiences` in Vault role | Medium | Hardcode `aud=vault-pki-bootstrap` in both the mock's default and Vault's role config |
 | 6 | Audience reads as "this isn't really GitLab" and finds the mock unconvincing | Low–Medium | Honest narration: "Vault's config is identical; only the JWT signer differs." Show the actual GitLab `id_tokens:` syntax in a slide for the prod posture |
@@ -396,7 +396,7 @@ sequenceDiagram
 Once approved:
 
 1. Write `mock-oidc/server.py` + Dockerfile. Run it standalone, confirm `/.well-known/jwks.json` + `/token` endpoints work via `curl`.
-2. Add mock-oidc service to `docker-compose.cert.yml`. Confirm Vault container can reach it (`docker exec vault wget -O- mock-oidc:8080/.well-known/jwks.json`).
+2. Add mock-oidc service to `docker-compose.cert.yml`. Confirm Vault container can reach it (`podman exec vault wget -O- mock-oidc:8080/.well-known/jwks.json`).
 3. Extend `vault-init-cert.sh` to enable `auth/jwt-gitlab/`, configure the role + policy + bootstrap PKI role. Confirm a hand-crafted JWT can log in via `vault write auth/jwt-gitlab/login`.
 4. Write `simulate-ci-bootstrap.sh`. End-to-end test: script run → bootstrap cert on disk → `openssl x509` verifies it.
 5. Write `simulate-ci-bootstrap-bad.sh`. Confirm rejection + audit log entry.

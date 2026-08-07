@@ -2,6 +2,9 @@
 
 set -e
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -42,12 +45,12 @@ setup_credentials() {
     fi
     
     # Ensure credentials are available in the container
-    if docker exec vault-agent test -f /vault/config/role-id && docker exec vault-agent test -f /vault/config/secret-id; then
+    if "$CONTAINER_ENGINE" exec vault-agent test -f /vault/config/role-id && "$CONTAINER_ENGINE" exec vault-agent test -f /vault/config/secret-id; then
         echo "   OK: Credentials available in container"
     else
         echo "   Copying credentials to container..."
-        docker exec vault-agent cp /vault/config/role-id /tmp/role-id 2>/dev/null || true
-        docker exec vault-agent cp /vault/config/secret-id /tmp/secret-id 2>/dev/null || true
+        "$CONTAINER_ENGINE" exec vault-agent cp /vault/config/role-id /tmp/role-id 2>/dev/null || true
+        "$CONTAINER_ENGINE" exec vault-agent cp /vault/config/secret-id /tmp/secret-id 2>/dev/null || true
     fi
 }
 
@@ -118,7 +121,7 @@ echo "================================================================="
 echo -e "${COLOR_RESET}"
 echo "Vault Agent automatically authenticates and maintains a token:"
 echo ""
-AGENT_TOKEN=$(docker exec vault-agent cat /tmp/vault-token)
+AGENT_TOKEN=$("$CONTAINER_ENGINE" exec vault-agent cat /tmp/vault-token)
 echo "Agent token: ${AGENT_TOKEN:0:20}..."
 echo ""
 echo -e "${GREEN}OK: Agent has valid authentication token!${COLOR_RESET}"
@@ -138,15 +141,15 @@ echo "   - AppRole provides token with specific policies for PKI operations"
 
 echo
 echo "   Agent's AppRole Configuration:"
-docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault read auth/approle/role/vault-agent-role' | grep -E "(token_no_default_policy|token_policies|token_ttl|token_max_ttl)" | sed 's/^/      /'
+"$CONTAINER_ENGINE" exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault read auth/approle/role/vault-agent-role' | grep -E "(token_no_default_policy|token_policies|token_ttl|token_max_ttl)" | sed 's/^/      /'
 
 echo
 echo "   PKI Policy Content (what allows agent to rotate certificates):"
-docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault policy read pki-policy' | sed 's/^/      /'
+"$CONTAINER_ENGINE" exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault policy read pki-policy' | sed 's/^/      /'
 
 echo
 echo "   Agent Token Information:"
-docker exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault token lookup -format=json '"$AGENT_TOKEN" | jq -r '.data | "Policies: \(.policies | join(", "))\nTTL: \(.ttl)s\nRenewable: \(.renewable)\nEntity ID: \(.entity_id)"' | sed 's/^/      /'
+"$CONTAINER_ENGINE" exec vault sh -c 'export VAULT_ADDR=http://localhost:8200 && export VAULT_TOKEN=myroot && vault token lookup -format=json '"$AGENT_TOKEN" | jq -r '.data | "Policies: \(.policies | join(", "))\nTTL: \(.ttl)s\nRenewable: \(.renewable)\nEntity ID: \(.entity_id)"' | sed 's/^/      /'
 
 echo
 echo -e "${GREEN}OK: Agent is properly authorized for PKI operations!${COLOR_RESET}"
@@ -214,7 +217,7 @@ echo "   - ca.tpl   -> /vault/agent/ca.crt (CA certificate)"
 
 echo
 echo "   Current template-generated files:"
-docker exec vault-agent ls -la /vault/agent/app.* /vault/agent/ca.crt 2>/dev/null || echo "   (Templates are rendering...)"
+"$CONTAINER_ENGINE" exec vault-agent ls -la /vault/agent/app.* /vault/agent/ca.crt 2>/dev/null || echo "   (Templates are rendering...)"
 wait_for_user
 
 echo -e "${BLUE}"
@@ -258,22 +261,22 @@ echo "Step 7: Certificate Details & Verification"
 echo "================================================================="
 echo -e "${COLOR_RESET}"
 echo "Inspecting auto-generated certificate details:"
-if docker exec vault-agent test -f /vault/agent/app.crt; then
+if "$CONTAINER_ENGINE" exec vault-agent test -f /vault/agent/app.crt; then
     echo "   Certificate subject and validity:"
-    docker exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -subject -dates
+    "$CONTAINER_ENGINE" exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -subject -dates
     
     echo
     echo "   Certificate content preview:"
-    docker exec vault-agent head -3 /vault/agent/app.crt
-    docker exec vault-agent tail -3 /vault/agent/app.crt
+    "$CONTAINER_ENGINE" exec vault-agent head -3 /vault/agent/app.crt
+    "$CONTAINER_ENGINE" exec vault-agent tail -3 /vault/agent/app.crt
     
     echo
     echo "   Private key file permissions:"
-    docker exec vault-agent ls -la /vault/agent/app.key
+    "$CONTAINER_ENGINE" exec vault-agent ls -la /vault/agent/app.key
     
     echo
     echo "   CA Certificate:"
-    docker exec vault-agent head -2 /vault/agent/ca.crt
+    "$CONTAINER_ENGINE" exec vault-agent head -2 /vault/agent/ca.crt
     
 else
     echo "   Waiting: Templates are still rendering, please wait a moment..."
@@ -301,14 +304,14 @@ echo
 show_cert_info() {
     local label="$1"
     echo "   INFO: $label"
-    if docker exec vault-agent test -f /vault/agent/app.crt; then
-        local cert_info=$(docker exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -subject -dates -serial 2>/dev/null)
-        local file_time=$(docker exec vault-agent stat -c %Y /vault/agent/app.crt)
+    if "$CONTAINER_ENGINE" exec vault-agent test -f /vault/agent/app.crt; then
+        local cert_info=$("$CONTAINER_ENGINE" exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -subject -dates -serial 2>/dev/null)
+        local file_time=$("$CONTAINER_ENGINE" exec vault-agent stat -c %Y /vault/agent/app.crt)
         echo "      Subject: $(echo "$cert_info" | grep subject | cut -d= -f2-)"
         echo "      Serial:  $(echo "$cert_info" | grep serial | cut -d= -f2)"
         echo "      Valid:   $(echo "$cert_info" | grep notBefore | cut -d= -f2-)"
         echo "      Expires: $(echo "$cert_info" | grep notAfter | cut -d= -f2-)"
-        echo "      File timestamp: $(docker exec vault-agent date -d @$file_time '+%H:%M:%S')"
+        echo "      File timestamp: $("$CONTAINER_ENGINE" exec vault-agent date -d @$file_time '+%H:%M:%S')"
     else
         echo "      Certificate not found"
     fi
@@ -325,16 +328,16 @@ echo
 
 # Wait and monitor for rotation (check every 5 seconds for up to 45 seconds)
 INITIAL_SERIAL=""
-if docker exec vault-agent test -f /vault/agent/app.crt; then
-    INITIAL_SERIAL=$(docker exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -serial 2>/dev/null | cut -d= -f2)
+if "$CONTAINER_ENGINE" exec vault-agent test -f /vault/agent/app.crt; then
+    INITIAL_SERIAL=$("$CONTAINER_ENGINE" exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -serial 2>/dev/null | cut -d= -f2)
 fi
 
 ROTATION_DETECTED=false
 for i in {1..9}; do
     echo "   Checking... ($((i*5)) seconds elapsed)"
     
-    if docker exec vault-agent test -f /vault/agent/app.crt; then
-        CURRENT_SERIAL=$(docker exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -serial 2>/dev/null | cut -d= -f2)
+    if "$CONTAINER_ENGINE" exec vault-agent test -f /vault/agent/app.crt; then
+        CURRENT_SERIAL=$("$CONTAINER_ENGINE" exec vault-agent cat /vault/agent/app.crt | openssl x509 -noout -serial 2>/dev/null | cut -d= -f2)
         
         if [ "$CURRENT_SERIAL" != "$INITIAL_SERIAL" ] && [ -n "$INITIAL_SERIAL" ]; then
             echo

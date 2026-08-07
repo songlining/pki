@@ -368,7 +368,7 @@ vault-agent-cert:
   command: vault agent -config=/vault/config/agent-cert.hcl
 ```
 
-Decision: **overlay file**, not edit to base. Layered compose pattern. `make agent-demo-cert` does `docker compose -f docker-compose.yml -f docker-compose.cert.yml up -d vault-agent-cert`.
+Decision: **overlay file**, not edit to base. Layered compose pattern. `make agent-demo-cert` does `podman compose -f docker-compose.yml -f docker-compose.cert.yml up -d vault-agent-cert` (engine resolved via `engine.sh`).
 
 ### 6. Makefile targets
 
@@ -481,7 +481,7 @@ Once the design is approved:
 3. Write `provision-host-cert.sh`.
 4. Write templates (`host-cert.tpl`, `host-key.tpl` or combined).
 5. Write `agent-cert.hcl`.
-6. Wire up docker-compose overlay and Makefile targets.
+6. Wire up the compose overlay and Makefile targets.
 7. Write `watch-cert-rotation.sh`.
 8. Extend `demo-preflight.sh`.
 9. Dry-run the full demo flow start to finish.

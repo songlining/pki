@@ -20,10 +20,19 @@ The demo runs on Vault Community Edition. No Enterprise features are used.
 
 ## Prerequisites
 
-- Docker with Docker Compose support
+- Podman Desktop (or any Podman install with `podman-compose` — Podman Desktop ships it)
 - Vault CLI
 - `openssl`
 - `jq`
+
+> **Container engine:** the demo runs on **Podman** by default (podman machine, as managed by Podman Desktop).
+> All scripts and the Makefile resolve the engine through [`engine.sh`](engine.sh): if `podman` is not
+> found they automatically fall back to Docker Desktop. Force a specific engine at runtime with
+> `CONTAINER_ENGINE=docker ./demo-preflight.sh`. The compose files are standard Compose spec, so no
+> changes are needed between engines.
+>
+> `podman compose` delegates to the `podman-compose` provider; the wrapper's "executing external
+> compose provider" notice is silenced via `PODMAN_COMPOSE_WARNING_LOGS=false` in `engine.sh` and the Makefile.
 
 No license file is required.
 
@@ -133,6 +142,7 @@ make clean
 ├── docker-compose.yml
 ├── docker-compose.cert.yml
 ├── docker-compose-temp.yml
+├── engine.sh
 ├── Makefile
 ├── README.md
 ├── quick-start.sh
@@ -151,6 +161,7 @@ make clean
 
 ## Key files
 
+- `engine.sh` - container engine abstraction (Podman Desktop by default, Docker fallback); sets `$CONTAINER_ENGINE` and `$COMPOSE` for every demo script
 - `docker-compose.yml` - default CE demo environment
 - `docker-compose.cert.yml` - TLS/cert-auth override, cert-auth Agent service, and mock OIDC issuer
 - `vault-init.sh` - PKI and AppRole initialization
@@ -183,9 +194,9 @@ make clean
 ## Useful checks
 
 ```bash
-docker compose ps
-docker compose logs vault
-docker compose logs vault-agent
+podman compose ps
+podman compose logs vault
+podman compose logs vault-agent
 vault status
 openssl x509 -in vault-agent-output/app.crt -noout -dates -serial
 ```

@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# Load container engine definition (Podman Desktop by default, Docker fallback).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/engine.sh"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -33,7 +36,7 @@ show_file() {
 
 token_accessor() {
     local token accessor
-    token="$(docker exec vault-agent-cert cat /tmp/vault-token-cert 2>/dev/null || true)"
+    token="$("$CONTAINER_ENGINE" exec vault-agent-cert cat /tmp/vault-token-cert 2>/dev/null || true)"
     if [ -z "$token" ]; then
         echo ""
         return 0
@@ -66,7 +69,7 @@ wait_for_file() {
 
 wait_for_agent_token() {
     for _ in {1..30}; do
-        if docker exec vault-agent-cert test -s /tmp/vault-token-cert >/dev/null 2>&1; then
+        if "$CONTAINER_ENGINE" exec vault-agent-cert test -s /tmp/vault-token-cert >/dev/null 2>&1; then
             return 0
         fi
         sleep 1
@@ -197,7 +200,7 @@ echo
 echo "Running provisioning now (so the demo starts from a fresh, short-lived bundle)..."
 INITIAL_HOST_CERT_TTL=60s ./provision-host-cert.sh >/dev/null
 echo "Restarting the Agent so it adopts the freshly provisioned credential..."
-docker restart vault-agent-cert >/dev/null
+"$CONTAINER_ENGINE" restart vault-agent-cert >/dev/null
 wait_for_agent_token
 echo
 echo "The resulting bundle on disk (${HOST_CERT}):"
@@ -327,7 +330,7 @@ echo
 
 if [ "$ROTATED" != true ]; then
     echo "No host certificate rotation detected within the expected window."
-    docker logs vault-agent-cert --tail 80
+    "$CONTAINER_ENGINE" logs vault-agent-cert --tail 80
     exit 1
 fi
 wait_for_user
@@ -360,13 +363,13 @@ echo "If the host reboots, the Agent must be able to re-authenticate purely"
 echo "from the cert bundle on disk - no operator, no CI, no secret-id."
 echo
 echo "Restarting the cert-auth Agent container..."
-docker restart vault-agent-cert >/dev/null
+"$CONTAINER_ENGINE" restart vault-agent-cert >/dev/null
 wait_for_agent_token
 POST_RESTART_ACCESSOR="$(token_accessor)"
 
 if [ -z "$POST_RESTART_ACCESSOR" ]; then
     echo "Agent did not re-authenticate after restart."
-    docker logs vault-agent-cert --tail 80
+    "$CONTAINER_ENGINE" logs vault-agent-cert --tail 80
     exit 1
 fi
 
