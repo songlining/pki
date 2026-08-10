@@ -159,7 +159,7 @@ echo -e "${YELLOW}Key commands it will run (excerpt):${NC}"
 show_cmd "vault secrets enable pki"
 show_cmd "vault write pki/root/generate/internal common_name=\"trading.demo.internal\" ttl=87600h"
 show_cmd "vault secrets enable -path=pki_int pki   # (intermediate mount, signed by root)"
-show_cmd "vault write pki/roles/app-role allowed_domains=\"example.com\" ..."
+show_cmd "vault write pki/roles/web-server allowed_domains=\"example.com\" ..."
 echo
 echo -e "${DIM}    (SKIP_APPROLE=true \u2014 cert-auth variant does not enable AppRole)${NC}"
 echo
@@ -181,7 +181,7 @@ echo "The agent's token can issue host + app certs and manage its own token. Not
 echo
 show_block "vault policy write pki-policy-host - <<EOF" <<'EOF'
 path "pki/issue/host-role"    { capabilities = ["create", "update"] }
-path "pki/issue/app-role" { capabilities = ["create", "update"] }
+path "pki/issue/web-server" { capabilities = ["create", "update"] }
 path "auth/token/lookup-self" { capabilities = ["read"] }
 path "auth/token/renew-self"  { capabilities = ["update"] }
 EOF

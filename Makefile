@@ -1,4 +1,4 @@
-.PHONY: help start stop stop-cert stop-default init demo clean setup status agent-demo setup-agent watch-rotation process-demo preflight live-demo workshop-demo operator-demo reset-demo setup-cert preflight-cert agent-demo-cert watch-cert-rotation live-demo-cert provision-host provision-host-bad-claim show-bootstrap-cert mock-oidc-logs
+.PHONY: help start stop stop-cert stop-default init demo clean setup status agent-demo setup-agent watch-rotation process-demo preflight live-demo workshop-demo operator-demo reset-demo setup-cert preflight-cert agent-demo-cert watch-cert-rotation live-demo-cert provision-host provision-host-bad-claim show-bootstrap-cert mock-oidc-logs deck-agent deck-api
 
 # Container engine: Podman Desktop (podman) by default, Docker as fallback.
 CONTAINER_ENGINE ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
@@ -11,6 +11,14 @@ COMPOSE_FILES := -f docker-compose.yml
 
 COMPOSE := $(COMPOSE_QUIET)$(CONTAINER_ENGINE) compose $(COMPOSE_FILES)
 CERT_COMPOSE := $(COMPOSE_QUIET)$(CONTAINER_ENGINE) compose $(COMPOSE_FILES) -f docker-compose.cert.yml
+
+deck-agent: ## Run the presenterm slide deck focused on Vault Agent cert rotation (-x enables live code execution)
+	@command -v presenterm >/dev/null 2>&1 || { echo "presenterm not installed: brew install presenterm"; exit 1; }
+	@presenterm -x presenterm/deck.md
+
+deck-api: ## Run the presenterm slide deck on API-driven cert issue/revoke (-x enables live code execution)
+	@command -v presenterm >/dev/null 2>&1 || { echo "presenterm not installed: brew install presenterm"; exit 1; }
+	@presenterm -x presenterm/deck-api.md
 
 help: ## Show this help message
 	@echo "HashiCorp Vault PKI Demo"

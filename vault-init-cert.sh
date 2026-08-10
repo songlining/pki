@@ -35,7 +35,7 @@ vault write pki/roles/host-role \
     ttl="30s"
 
 echo -e "${YELLOW}Making the application certificate role lease-backed for predictable demo rotation...${NC}"
-vault write pki/roles/app-role \
+vault write pki/roles/web-server \
     allowed_domains="example.com" \
     allow_subdomains=true \
     allow_localhost=true \
@@ -52,7 +52,7 @@ path "pki/issue/host-role" {
   capabilities = ["create", "update"]
 }
 
-path "pki/issue/app-role" {
+path "pki/issue/web-server" {
   capabilities = ["create", "update"]
 }
 

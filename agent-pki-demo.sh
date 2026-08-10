@@ -58,10 +58,10 @@ setup_credentials() {
 setup_pki_role() {
     echo "Ensuring PKI role exists for Vault Agent..."
     
-    # Check if app-role exists
-    if ! vault read pki/roles/app-role >/dev/null 2>&1; then
-        echo "   Creating app-role for certificate generation..."
-        vault write pki/roles/app-role \
+    # Check if web-server exists
+    if ! vault read pki/roles/web-server >/dev/null 2>&1; then
+        echo "   Creating web-server for certificate generation..."
+        vault write pki/roles/web-server \
             allowed_domains="example.com,localhost" \
             allow_subdomains=true \
             allow_localhost=true \
@@ -183,7 +183,7 @@ ROLES=$(curl -s -H "X-Vault-Token: myroot" http://localhost:8200/v1/pki/roles?li
 if [ -n "$ROLES" ]; then
     echo "$ROLES" | sed 's/^/      /'
 else
-    echo "      app-role (configured)"
+    echo "      web-server (configured)"
 fi
 
 echo "   Root CA certificate info:"
@@ -249,7 +249,7 @@ echo "   - ca.tpl  -> {{ .Data.issuing_ca }}"
 echo
 echo "   When templates render, Vault Agent:"
 echo "   1. Uses AppRole auto-auth to get a token"
-echo "   2. Calls pki/issue/app-role with common_name=app.example.com and ttl=30s"
+echo "   2. Calls pki/issue/web-server with common_name=app.example.com and ttl=30s"
 echo "   3. Writes the rendered outputs to /vault/agent/app.* and /vault/agent/ca.crt"
 echo "   4. Sets the file permissions from agent.hcl"
 echo "   5. Re-renders before the short-lived cert expires"

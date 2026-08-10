@@ -38,9 +38,9 @@ Covers:
 ```mermaid
 flowchart LR
     Op([Operator]) --> Mount[Enable pki<br/>mount root + intermediate]
-    Mount --> Role[Write app-role<br/>allowed_domains, TTLs]
-    Role --> Issue[vault write pki/issue/app-role<br/>cert + key + chain]
-    Role --> Sign[vault write pki/sign/app-role<br/>CSR signed, key stays out]
+    Mount --> Role[Write web-server<br/>allowed_domains, TTLs]
+    Role --> Issue[vault write pki/issue/web-server<br/>cert + key + chain]
+    Role --> Sign[vault write pki/sign/web-server<br/>CSR signed, key stays out]
     Issue --> Inspect[openssl x509 -text<br/>SANs, IPs, validity]
     Sign --> Inspect
     Inspect --> Verify[openssl verify -CAfile<br/>chain to root]
@@ -83,7 +83,7 @@ sequenceDiagram
     Agent->>Vault: auth/approle/login (role-id + secret-id)
     Vault-->>Agent: short-lived token (policy: pki-policy)
     loop every TTL (~30s)
-        Agent->>Vault: pki/issue/app-role common_name=...
+        Agent->>Vault: pki/issue/web-server common_name=...
         Vault-->>Agent: new cert + key + chain
         Agent->>Disk: render cert.tpl -> cert.pem / key.pem / ca-chain.pem
         Disk-->>App: file change observed (mtime + new serial)
@@ -167,7 +167,7 @@ sequenceDiagram
     Agent->>Bundle: read host.pem from disk
     Agent->>Vault: auth/cert/login (no operator intervention)
     Vault-->>Agent: token
-    Agent->>App: render app cert via app-role
+    Agent->>App: render app cert via web-server
 ```
 
 ### Negative path: provision-host-bad-claim

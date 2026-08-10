@@ -107,6 +107,8 @@ make live-demo-cert     # cert-auth variant, 5-step guided walkthrough
 make demo               # traditional interactive PKI demo
 make agent-demo         # Vault Agent rotation (AppRole)
 make process-demo       # process supervisor reacting to rotation
+make deck-agent        # presenterm slide deck on Vault Agent cert rotation (live exec blocks, runs in Kitty)
+make deck-api          # presenterm slide deck on API-driven cert issue/revoke (live exec blocks)
 ```
 
 ## Common commands
@@ -130,6 +132,8 @@ make live-demo-cert
 make watch-cert-rotation
 make process-demo
 make watch-rotation
+make deck-agent        # presenterm live demo deck on Vault Agent cert rotation (presenterm/deck.md)
+make deck-api          # presenterm live API demo deck: AppRole → issue → revoke (presenterm/deck-api.md)
 make reset-demo
 make status
 make clean
@@ -207,7 +211,7 @@ openssl x509 -in vault-agent-output/app.crt -noout -dates -serial
 - The root token is hardcoded to `myroot` for convenience
 - TLS is disabled on the Vault API endpoint for ease of local testing
 - Demo cleanup defaults now target known generated files rather than broad wildcard deletion
-- The Vault Agent AppRole is scoped to `pki/issue/app-role` plus token `lookup-self` and `renew-self`
+- The Vault Agent AppRole is scoped to `pki/issue/web-server` plus token `lookup-self` and `renew-self`
 - The AppRole is configured without the default policy
 - This setup is for demos and learning, not production use
 

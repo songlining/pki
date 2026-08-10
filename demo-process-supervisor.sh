@@ -75,10 +75,10 @@ setup_pki_role() {
     export VAULT_ADDR=http://localhost:8200
     export VAULT_TOKEN=myroot
     
-    # Check if app-role exists
-    if ! vault read pki/roles/app-role >/dev/null 2>&1; then
-        print_important "Creating app-role for certificate generation..."
-        vault write pki/roles/app-role \
+    # Check if web-server exists
+    if ! vault read pki/roles/web-server >/dev/null 2>&1; then
+        print_important "Creating web-server for certificate generation..."
+        vault write pki/roles/web-server \
             allowed_domains="example.com,localhost" \
             allow_subdomains=true \
             allow_localhost=true \

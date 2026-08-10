@@ -225,10 +225,10 @@ if [ "$STATUS" -eq 0 ]; then
         warn "Vault Agent AppRole is missing. Run 'make setup-agent'."
     fi
 
-    if [ "$MODE" != "cert" ] && vault read pki/roles/app-role >/dev/null 2>&1; then
-        ok "Vault Agent issuance role 'app-role' is configured"
+    if [ "$MODE" != "cert" ] && vault read pki/roles/web-server >/dev/null 2>&1; then
+        ok "Vault Agent issuance role 'web-server' is configured"
     elif [ "$MODE" != "cert" ]; then
-        warn "Vault Agent issuance role 'app-role' is missing. 'make agent-demo' will create it."
+        warn "Vault Agent issuance role 'web-server' is missing. 'make agent-demo' will create it."
     fi
 
     if [ "$MODE" != "cert" ] && container_running vault-agent; then

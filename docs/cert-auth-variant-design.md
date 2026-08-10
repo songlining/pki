@@ -2,6 +2,7 @@
 
 > Status: Draft for review (Larry, 2026-05-25)
 > Companion: `gitlab-ci-provisioning-design.md` (sibling) — covers steps 1–2 of the end-to-end flow (CI provisioning via mock OIDC). This doc covers steps 3–6 (agent runtime).
+> Demo runbook: `demos.md` (sibling) — operator-facing walkthrough of both variants.
 > Motivation: the recommended pattern for bare-metal Vault Agent deployments is TLS cert auth + agent-driven self-rotation; the existing demo uses AppRole + static secret_id, so we currently have no live demo of the recommended pattern.
 
 ## Goal
@@ -97,7 +98,7 @@ New script adds:
   ```bash
   vault auth enable cert
   ```
-- A new PKI role for **host certs** (separate from `app-role` which issues app certs). Reason: different domain (`*.trading.demo.internal`) and different TTL profile (host cert: 30s for demo theatre; app cert: 30s already).
+- A new PKI role for **host certs** (separate from `web-server` which issues app certs). Reason: different domain (`*.trading.demo.internal`) and different TTL profile (host cert: 30s for demo theatre; app cert: 30s already).
   ```bash
   vault write pki/roles/host-role \
       allowed_domains="trading.demo.internal" \
@@ -117,7 +118,7 @@ New script adds:
 - A scoped policy `pki-policy-host` that grants the agent the right to **re-issue its own cert** and **issue app certs**:
   ```hcl
   path "pki/issue/host-role"     { capabilities = ["create","update"] }
-  path "pki/issue/app-role"  { capabilities = ["create","update"] }
+  path "pki/issue/web-server"  { capabilities = ["create","update"] }
   path "auth/token/renew-self"   { capabilities = ["update"] }
   path "auth/token/lookup-self"  { capabilities = ["read"] }
   ```
@@ -427,7 +428,7 @@ sequenceDiagram
     Agent->>Vault: auth/cert/login (with NEW host.crt)
     Vault-->>Agent: new token
 
-    Agent->>Vault: pki/issue/app-role (using token)
+    Agent->>Vault: pki/issue/web-server (using token)
     Vault-->>Agent: new app cert + key
     Agent->>Disk: write app.crt, app.key, app.env
     Agent->>App: template.command: restart-app.sh

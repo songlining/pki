@@ -109,8 +109,8 @@ vault write pki/root/generate/internal \
     ttl=8760h
 
 # Create PKI role for demo
-echo -e "${YELLOW}Creating PKI role 'app-role'...${NC}"
-vault write pki/roles/app-role \
+echo -e "${YELLOW}Creating PKI role 'web-server'...${NC}"
+vault write pki/roles/web-server \
     allowed_domains="example.com" \
     allow_subdomains=true \
     max_ttl="72h"
@@ -130,8 +130,17 @@ else
     # Create policy for PKI operations
     echo -e "${YELLOW}Creating PKI policy...${NC}"
     vault policy write pki-policy - <<EOF
-path "pki/issue/app-role" {
+path "pki/issue/web-server" {
   capabilities = ["create", "update"]
+}
+path "pki/revoke" {
+  capabilities = ["create", "update"]
+}
+path "pki/cert/+" {
+  capabilities = ["read"]
+}
+path "pki/crl/+" {
+  capabilities = ["read"]
 }
 path "auth/token/lookup-self" {
   capabilities = ["read"]
