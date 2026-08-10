@@ -49,3 +49,6 @@ vault-tls/
 # Local git worktrees
 .worktrees/
 .superpowers/
+
+# presenterm deck validation captures
+output/

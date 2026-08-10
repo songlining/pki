@@ -2,6 +2,7 @@
 
 > Status: Draft for review (Larry, 2026-05-26)
 > Extends: `cert-auth-variant-design.md` (sibling)
+> Demo runbook: `demos.md` (sibling) — operator-facing walkthrough.
 > Scope decisions (locked 2026-05-26): mock OIDC provider (not real GitLab CE); cert-auth bootstrap only
 
 ## Goal
@@ -414,3 +415,106 @@ This doc and `cert-auth-variant-design.md` are **complementary**, not overlappin
 - This doc covers **steps 1–2** (CI provisioning: JWT/OIDC → Vault token → bootstrap cert on disk).
 
 Together they make the full provisioning + runtime story end-to-end demonstrable, with both halves honest about their failure modes.
+
+## Appendix A — How real GitLab issues JWTs (what the mock is emulating)
+
+This appendix exists so future-you (and any ASX reviewer) can confirm the mock is not hand-waving. The mock OIDC server reproduces the shape and security boundary of GitLab's real ID token mechanism; the differences are in **issuer identity, signing key custody, and CI tooling**, not in the auth contract Vault validates.
+
+### A.1 GitLab is a full OIDC issuer
+
+Every GitLab instance (`gitlab.com` or self-managed) exposes standard OIDC discovery endpoints at the **instance root**, not per-project:
+
+- Discovery: `https://gitlab.example.com/.well-known/openid-configuration`
+- JWKS: `https://gitlab.example.com/oauth/discovery/keys`
+
+The `iss` claim on every JWT GitLab mints equals the instance base URL. GitLab manages the signing keypair internally and rotates it; Vault fetches the public key via JWKS — no shared secret, no callbacks.
+
+### A.2 Two mechanisms — which one GitLab actually uses
+
+| Mechanism | Status | Audience control | Notes |
+|---|---|---|---|
+| `CI_JOB_JWT` (v1) | Removed | None — fixed | Pre-15.7. Don't design against. |
+| `CI_JOB_JWT_V2` | Deprecated, removed in 17.0 | Single fixed (instance URL) | Auto-injected env var. |
+| `id_tokens:` keyword | **Current — GA since 15.7** | Per-token configurable `aud`, multiple tokens per job | The one to design against. |
+
+Modern `.gitlab-ci.yml`:
+
+```yaml
+provision-host:
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: https://vault.example.com
+  script:
+    - >
+      curl --request POST
+      --data "{\"jwt\":\"$VAULT_ID_TOKEN\",\"role\":\"host-bootstrap\"}"
+      $VAULT_ADDR/v1/auth/jwt-gitlab/login
+```
+
+GitLab injects `VAULT_ID_TOKEN` only into that job, scoped to that `aud`, and the token expires when the job ends (default 5 min, configurable up to job timeout).
+
+### A.3 Claims real GitLab emits — vs what the mock emits
+
+| Claim | Real GitLab | Mock OIDC | Purpose / Vault use |
+|---|---|---|---|
+| `iss` | `https://gitlab.example.com` | `http://mock-oidc:8080` | `bound_issuer` |
+| `sub` | `project_path:acme/trading-platform:ref_type:branch:ref:main` | same shape | identity string |
+| `aud` | from `id_tokens.<NAME>.aud` | from script arg | `bound_audiences` |
+| `project_id` | numeric | faked numeric | — |
+| `project_path` | `acme/trading-platform` | configurable | `bound_claims` — **primary trust gate** |
+| `namespace_id`, `namespace_path` | yes | optional | additional binding |
+| `pipeline_id`, `pipeline_source` | yes (`push`, `schedule`, `web`, `api`, …) | omitted by default | optional binding |
+| `job_id` | yes | faked | audit only |
+| `job_workflow_ref` | path to the CI file that defined the job | omitted by default | optional binding — strong signal |
+| `ref` | `main` | configurable | `bound_claims` — **primary trust gate** |
+| `ref_type` | `branch` / `tag` | configurable | `bound_claims` — **primary trust gate** |
+| `ref_protected` | `true` / `false` | configurable | `bound_claims` — **primary trust gate** |
+| `environment`, `environment_protected` | when job targets an environment | omitted | optional |
+| `runner_id`, `runner_environment` | `gitlab-hosted` / `self-hosted` | omitted | optional |
+| `user_id`, `user_login`, `user_email` | who triggered the pipeline | omitted | audit only |
+| `iat`, `nbf`, `exp` | yes | yes | standard JWT |
+| `ci_config_ref_uri`, `ci_config_sha` | newer (16.x+) | omitted | optional |
+
+**The mock emits the four claims Vault actually binds on:** `project_path`, `ref`, `ref_type`, `ref_protected`. Everything else is decoration GitLab adds for audit/observability; binding against them is optional. The security boundary Vault enforces (`bound_claims` + signature validation) is identical between mock and real.
+
+### A.4 Vault config — identical for mock and real
+
+```bash
+# Mock
+vault write auth/jwt-gitlab/config \
+  oidc_discovery_url="http://mock-oidc:8080" \
+  bound_issuer="http://mock-oidc:8080"
+
+# Real GitLab (only the URL changes)
+vault write auth/jwt-gitlab/config \
+  oidc_discovery_url="https://gitlab.example.com" \
+  bound_issuer="https://gitlab.example.com"
+```
+
+Role config (`bound_claims`, `token_policies`, `token_ttl`) is **byte-for-byte identical**. This is the point of the mock: the demo wires up production-shaped JWT auth and validates it against a controllable issuer, so the same Vault config ships to real GitLab unchanged.
+
+### A.5 What the mock does NOT reproduce — and why that's fine
+
+| Gap | Why it doesn't matter for the demo |
+|---|---|
+| Real key rotation | Mock signs with a static key. Vault still validates signature + claims; rotation is an operational concern, not a security-boundary concern. |
+| `id_tokens:` syntax in YAML | The simulator script substitutes for a runner. The JWT Vault sees on the wire is indistinguishable. |
+| GitLab's role-based access controls on token minting | We faking out the issuer, so any "who can trigger this pipeline" gating is out of scope. `bound_claims` on the Vault side still enforces the trust boundary we care about. |
+| Multi-tenant claims (`namespace_id`, `user_id` etc.) | Not used in `bound_claims`; emitting them would be cosmetic. Can be added if a reviewer asks. |
+
+### A.6 Authoritative sources (verify before promising specifics)
+
+- `docs.gitlab.com/ci/secrets/id_token_authentication/` — canonical "how GitLab issues ID tokens" reference
+- `docs.gitlab.com/ci/yaml/#id_tokens` — `id_tokens:` keyword reference (`aud:` field)
+- `docs.gitlab.com/ci/cloud_services/vault/` — official GitLab-to-Vault example using `id_tokens:` (the pattern this demo follows)
+
+Caveats worth re-verifying against the version ASX runs:
+
+- Default ID-token TTL (~5 min) and max-TTL semantics
+- Exact JWKS path — Vault auto-resolves it via discovery; the design doesn't hardcode it, but confirm the discovery doc is reachable
+- Newer claims (`ci_config_ref_uri`, `ci_config_sha`, `runner_environment`) availability if you want to bind on them
+- `CI_JOB_JWT_V2` removal status on the customer's GitLab version (removed in 17.0 — if they're older, both paths exist)
+
+### A.7 One-line summary for a sceptical reviewer
+
+> *The mock is a test double for the issuer, not for the auth contract. Vault sees a signed JWT with the same claims it would see from real GitLab; `bound_claims` enforces the same trust boundary either way. Swapping the mock for `https://gitlab.example.com` is a URL change, not a redesign.*
