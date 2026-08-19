@@ -1,0 +1,52 @@
+# cert-migrate demo — two independent Vault servers.
+#
+# vault-old and vault-new are completely separate dev-mode Vaults (separate
+# storage, separate TLS listeners, separate PKI). The demo shows that a leaf
+# certificate issued by vault-old's PKI can also authenticate into vault-new
+# once vault-new trusts the SAME CA — no re-issuance, no client change.
+#
+# Ports: vault-old -> 8210, vault-new -> 8220 (8200 stays free for the
+# default single-Vault demo stack).
+#
+# Standalone file: no dependency on docker-compose.yml / docker-compose.cert.yml.
+# Explicit project name isolates this stack from the default "pki" compose
+# project so 'make stop' / 'make stop-cert' can never touch these containers,
+# and 'make stop-migrate' can never touch the default ones.
+name: vault-migrate
+
+services:
+  vault-old:
+    image: hashicorp/vault:1.21.4
+    container_name: vault-old
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "${VAULT_DEV_ROOT_TOKEN_ID:-myroot}"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./vault-migrate-tls/old:/vault/tls
+    ports:
+      - "8210:8200"
+    networks:
+      - vault-migrate-network
+    hostname: vault-old
+    command: vault server -dev -dev-tls -dev-tls-cert-dir=/vault/tls -dev-root-token-id="${VAULT_DEV_ROOT_TOKEN_ID:-myroot}" -dev-listen-address="0.0.0.0:8200"
+
+  vault-new:
+    image: hashicorp/vault:1.21.4
+    container_name: vault-new
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "${VAULT_DEV_ROOT_TOKEN_ID:-myroot}"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./vault-migrate-tls/new:/vault/tls
+    ports:
+      - "8220:8200"
+    networks:
+      - vault-migrate-network
+    hostname: vault-new
+    command: vault server -dev -dev-tls -dev-tls-cert-dir=/vault/tls -dev-root-token-id="${VAULT_DEV_ROOT_TOKEN_ID:-myroot}" -dev-listen-address="0.0.0.0:8200"
+
+networks:
+  vault-migrate-network:
+    driver: bridge

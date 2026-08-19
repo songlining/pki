@@ -202,3 +202,20 @@ make reset-demo
 ```
 
 <!-- speaker_note: Reset stops the containers and clears generated files. PKI data is also lost (dev server is in-memory). The next make deck-agent run self-heals on its first slide, so no manual setup is needed. -->
+
+<!-- end_slide -->
+
+Shutdown — stop the whole demo system
+=====================================
+
+End of the session: stop every container this repo started — the migrate pair plus the default Vault stack.
+
+```bash +exec
+[ -f Makefile ] || cd ..
+make stop-migrate || true
+make stop || true
+echo "== remaining demo containers =="
+podman ps --format "{{.Names}}" | grep -E "vault" || echo "none — everything is stopped"
+```
+
+<!-- speaker_note: make stop covers the default stack and the cert-auth variant. Run this only when the demo session is fully over — the first slide of the next run rebuilds the environment from scratch. -->

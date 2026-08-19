@@ -46,6 +46,10 @@ vault-agent-output/
 vault-agent-output-cert/
 vault-tls/
 
+# cert-migrate demo (two-Vault scenario) artifacts
+migrate-work/
+vault-migrate-tls/
+
 # Local git worktrees
 .worktrees/
 .superpowers/

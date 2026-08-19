@@ -103,10 +103,39 @@ vault status | grep -E "Sealed|Version"
 
 <!-- end_slide -->
 
+What was set up — the basics
+============================
+
+One-time, by the operator: the engine, the issuer, and the issuance profile. The app never sees any of this.
+
+```bash
+# 1. the PKI engine, with a 10-year ceiling
+vault secrets enable pki
+vault secrets tune -max-lease-ttl=87600h pki
+
+# 2. the endpoints relying parties fetch (AIA + CRL)
+vault write pki/config/urls \
+    issuing_certificates="http://vault:8200/v1/pki/ca" \
+    crl_distribution_points="http://vault:8200/v1/pki/crl"
+
+# 3. the issuer — one self-signed root CA
+vault write pki/root/generate/internal \
+    common_name="Example Root CA" ttl=8760h
+
+# 4. the issuance profile — what the app may ask for
+vault write pki/roles/web-server \
+    allowed_domains="example.com" allow_subdomains=true \
+    max_ttl="72h"
+```
+
+<!-- speaker_note: These are the exact one-time steps from vault-init.sh (make init). The root is generated internally (key never leaves Vault). The role caps every issued cert at 72h — so even the app's requests can't exceed it. The next slide shows the resulting state. -->
+
+<!-- end_slide -->
+
 PKI is prepared
 ===============
 
-One-time setup — engine, role, policy, AppRole. **AppRole** is *how the app proves who it is* · `web-server` is *which certificate profile it gets*.
+What the operator's one-time setup produced — engine, role, policy, AppRole. **AppRole** is *how the app proves who it is* · `web-server` is *which certificate profile it gets*.
 
 ```bash +exec
 [ -f .env ] || cd ..
@@ -290,3 +319,20 @@ make reset-demo
 ```
 
 <!-- speaker_note: Reset stops the containers and clears generated files. PKI data is also lost (dev server is in-memory). The next make deck-api run self-heals on its first slide, so no manual setup is needed. -->
+
+<!-- end_slide -->
+
+Shutdown — stop the whole demo system
+=====================================
+
+End of the session: stop every container this repo started — the migrate pair plus the default Vault stack.
+
+```bash +exec
+[ -f Makefile ] || cd ..
+make stop-migrate || true
+make stop || true
+echo "== remaining demo containers =="
+podman ps --format "{{.Names}}" | grep -E "vault" || echo "none — everything is stopped"
+```
+
+<!-- speaker_note: make stop covers the default stack and the cert-auth variant. Run this only when the demo session is fully over — the first slide of the next run rebuilds the environment from scratch. -->

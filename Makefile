@@ -1,4 +1,4 @@
-.PHONY: help start stop stop-cert stop-default init demo clean setup status agent-demo setup-agent watch-rotation process-demo preflight live-demo workshop-demo operator-demo reset-demo setup-cert preflight-cert agent-demo-cert watch-cert-rotation live-demo-cert provision-host provision-host-bad-claim show-bootstrap-cert mock-oidc-logs deck-agent deck-api
+.PHONY: help start stop stop-cert stop-default stop-migrate init demo clean setup status agent-demo setup-agent watch-rotation process-demo preflight live-demo workshop-demo operator-demo reset-demo setup-cert preflight-cert agent-demo-cert watch-cert-rotation live-demo-cert provision-host provision-host-bad-claim show-bootstrap-cert mock-oidc-logs cert-migrate deck-agent deck-api deck-migrate
 
 # Container engine: Podman Desktop (podman) by default, Docker as fallback.
 CONTAINER_ENGINE ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
@@ -12,6 +12,10 @@ COMPOSE_FILES := -f docker-compose.yml
 COMPOSE := $(COMPOSE_QUIET)$(CONTAINER_ENGINE) compose $(COMPOSE_FILES)
 CERT_COMPOSE := $(COMPOSE_QUIET)$(CONTAINER_ENGINE) compose $(COMPOSE_FILES) -f docker-compose.cert.yml
 
+# Fully isolated compose project (explicit `name: vault-migrate` inside the
+# file) — separate containers, network, and ports from every other scenario.
+MIGRATE_COMPOSE := $(COMPOSE_QUIET)$(CONTAINER_ENGINE) compose -f docker-compose.migrate.yml
+
 deck-agent: ## Run the presenterm slide deck focused on Vault Agent cert rotation (-x enables live code execution)
 	@command -v presenterm >/dev/null 2>&1 || { echo "presenterm not installed: brew install presenterm"; exit 1; }
 	@presenterm -x presenterm/deck.md
@@ -19,6 +23,10 @@ deck-agent: ## Run the presenterm slide deck focused on Vault Agent cert rotatio
 deck-api: ## Run the presenterm slide deck on API-driven cert issue/revoke (-x enables live code execution)
 	@command -v presenterm >/dev/null 2>&1 || { echo "presenterm not installed: brew install presenterm"; exit 1; }
 	@presenterm -x presenterm/deck-api.md
+
+deck-migrate: ## Run the presenterm slide deck on two-Vault cert migration (-x enables live code execution)
+	@command -v presenterm >/dev/null 2>&1 || { echo "presenterm not installed: brew install presenterm"; exit 1; }
+	@presenterm -x presenterm/deck-migrate.md
 
 help: ## Show this help message
 	@echo "HashiCorp Vault PKI Demo"
@@ -51,6 +59,11 @@ stop-default: ## Stop only the default demo containers
 	@echo "Stopping default Vault demo containers..."
 	$(COMPOSE) down
 	@echo "Container stopped!"
+
+stop-migrate: ## Stop only the cert-migrate demo containers (vault-old + vault-new)
+	@echo "Stopping cert-migrate demo containers..."
+	$(MIGRATE_COMPOSE) down --remove-orphans
+	@echo "Cert-migrate containers stopped!"
 
 init: ## Initialize Vault and PKI (run after start)
 	@echo "Initializing Vault and PKI..."
@@ -130,6 +143,10 @@ show-bootstrap-cert: ## Inspect the current bootstrap host certificate
 
 mock-oidc-logs: ## Tail the mock OIDC issuer's logs
 	$(CERT_COMPOSE) logs -f mock-oidc
+
+cert-migrate: ## Two-Vault cert migration demo (same cert authenticates into both Vaults)
+	@echo "Starting the two-Vault certificate migration demo..."
+	./cert-migrate-demo.sh
 
 agent-demo-cert: preflight-cert ## Run Vault Agent with TLS cert auto-auth and self-rotation
 	@echo "Starting cert-auth Vault Agent..."

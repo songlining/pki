@@ -58,6 +58,17 @@ This path starts Vault with the development TLS listener because Vault's `auth/c
 
 For the full step-by-step scenario (what each step shows, what to narrate, and the CI-simulated bootstrap), see [docs/demos.md](docs/demos.md#vault-agent-cert-auth-rotation-demo). For the bootstrap design, see [docs/gitlab-ci-provisioning-design.md](docs/gitlab-ci-provisioning-design.md).
 
+### Two-Vault certificate migration demo
+
+```bash
+make cert-migrate       # start vault-old (:8210) + vault-new (:8220) and run the full scenario
+make stop-migrate       # tear down only the migration demo containers
+```
+
+`vault-old` runs a PKI CA and issues a client certificate that authenticates into `vault-old`. Before migration the same certificate is **rejected** by `vault-new` (negative control); one registration of vault-old's CA into `vault-new`'s `auth/cert` — and the **same, unchanged certificate** authenticates into `vault-new` too. The takeaway: certificate auth is anchored in the CA, not the server, so migrating the trust anchor keeps every issued cert valid with zero re-issuance.
+
+This scenario is fully isolated: its own compose project (`vault-migrate`), its own network, ports 8210/8220, and its own work directory (`migrate-work/`). It never touches the default or cert-auth stacks, and `make stop` / `make stop-cert` never touch it.
+
 ### Step by step
 
 ```bash
@@ -107,8 +118,10 @@ make live-demo-cert     # cert-auth variant, 5-step guided walkthrough
 make demo               # traditional interactive PKI demo
 make agent-demo         # Vault Agent rotation (AppRole)
 make process-demo       # process supervisor reacting to rotation
+make cert-migrate       # two-Vault cert migration (same cert authenticates into both)
 make deck-agent        # presenterm slide deck on Vault Agent cert rotation (live exec blocks, runs in Kitty)
 make deck-api          # presenterm slide deck on API-driven cert issue/revoke (live exec blocks)
+make deck-migrate      # presenterm slide deck on two-Vault cert migration (live exec blocks)
 ```
 
 ## Common commands
@@ -130,10 +143,13 @@ make setup-cert
 make agent-demo-cert
 make live-demo-cert
 make watch-cert-rotation
+make cert-migrate
+make stop-migrate
 make process-demo
 make watch-rotation
 make deck-agent        # presenterm live demo deck on Vault Agent cert rotation (presenterm/deck.md)
 make deck-api          # presenterm live API demo deck: AppRole → issue → revoke (presenterm/deck-api.md)
+make deck-migrate      # presenterm live demo deck: one cert, two Vaults (presenterm/deck-migrate.md)
 make reset-demo
 make status
 make clean
@@ -168,6 +184,8 @@ make clean
 - `engine.sh` - container engine abstraction (Podman Desktop by default, Docker fallback); sets `$CONTAINER_ENGINE` and `$COMPOSE` for every demo script
 - `docker-compose.yml` - default CE demo environment
 - `docker-compose.cert.yml` - TLS/cert-auth override, cert-auth Agent service, and mock OIDC issuer
+- `docker-compose.migrate.yml` - standalone two-Vault stack (`vault-old` :8210, `vault-new` :8220) for the certificate migration demo
+- `cert-migrate-demo.sh` - narrated two-Vault migration scenario (issue on old, reject on new, register CA, accept same cert)
 - `vault-init.sh` - PKI and AppRole initialization
 - `vault-init-cert.sh` - cert-auth role, host issuance role, host policy, **JWT auth method (`jwt-gitlab`), bootstrap PKI role, and `pki-bootstrap-policy`**
 - `provision-host-cert.sh` - legacy root-token bootstrap kept for fallback; the demo now uses the CI simulator below
